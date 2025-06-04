@@ -20,9 +20,21 @@ export const verifySignupOtp = async (verificationData: any) => {
   }
 };
 
+
+export const resendSignupOtp = async (data: { email: string }) => {
+  try {
+    const response = await axiosInstance.post('/api/auth/resend-signup-otp', data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};
+
+
+
 export const loginUser = async (credentials: any) => {
   try {
-    const response = await axiosInstance.post('/auth/login', credentials);
+    const response = await axiosInstance.post('/api/auth/login', credentials);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
