@@ -43,7 +43,7 @@ export const loginUser = async (credentials: any) => {
 
 export const forgotPasswordRequest = async (email: string) => {
   try {
-    const response = await axiosInstance.post('/auth/forgot-password', { email });
+    const response = await axiosInstance.post('/api/auth/forgot-password', { email });
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
@@ -52,11 +52,19 @@ export const forgotPasswordRequest = async (email: string) => {
 
 export const resetPasswordConfirm = async (resetData: any) => {
   try {
-    const response = await axiosInstance.post('/auth/reset-password', resetData);
+    const response = await axiosInstance.post('/api/auth/reset-password', resetData);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
   }
 };
 
+export const resendForgotPasswordOtpRequest = async (email: string) => {
+  try {
+    const response = await axiosInstance.post('/api/auth/resend-forgot-password-otp', { email });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data?.message || error.message;
+  }
+};
 
