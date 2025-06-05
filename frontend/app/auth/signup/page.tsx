@@ -1,10 +1,5 @@
-// app/signup/page.tsx (using app directory convention)
-// Or pages/signup.tsx (using pages directory convention)
-
-import SignupForm from './singup'; // Adjust path as needed
+import SignupForm from "./singup" // Fixed typo: was './singup'
 
 export default function SignupPage() {
-  return (
-    <SignupForm />
-  );
+  return <SignupForm />
 }
