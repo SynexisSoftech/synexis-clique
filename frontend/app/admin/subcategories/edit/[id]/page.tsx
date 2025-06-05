@@ -1,125 +1,195 @@
-"use client"
+// app/dashboard/subcategories/edit/[id]/page.tsx
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Upload, X } from "lucide-react"
-import Link from "next/link"
-import { useRouter, useParams } from "next/navigation"
-
-interface Category {
-  id: string
-  title: string
-}
-
-interface Subcategory {
-  id: string
-  title: string
-  categoryId: string
-  description: string
-  seoKeywords: string
-  tags: string
-  status: string
-  image?: string
-}
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Upload, X } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
+import { subcategoriesService, Subcategory as ISubcategory } from "../../../../../service/subcategories"; // Renamed to ISubcategory to avoid conflict
+import { categoriesService, Category as ICategory } from "../../../../../service/categoryApi"; // Renamed to ICategory
+import AdminRouteGuard from "@/app/AdminRouteGuard";
 
 export default function EditSubcategoryPage() {
-  const router = useRouter()
-  const params = useParams()
-  const [isLoading, setIsLoading] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Subcategory>({
-    id: "",
+  const router = useRouter();
+  const params = useParams();
+  const subcategoryId = params.id as string; // Get ID from URL params
+
+  const [isLoading, setIsLoading] = useState(true); // Initial loading state for data fetch
+  const [isSaving, setIsSaving] = useState(false); // Loading state for form submission
+  const [error, setError] = useState<string | null>(null);
+
+  const [categories, setCategories] = useState<ParentCategory[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null); // To store the new image file
+
+  // Initial state for form data, matches the structure of ISubcategory
+  const [formData, setFormData] = useState<ISubcategory>({
+    _id: "",
     title: "",
     categoryId: "",
     description: "",
     seoKeywords: "",
     tags: "",
     status: "active",
-  })
+    image: undefined, // Explicitly set as undefined initially
+    createdAt: "", // These fields will be populated from fetched data
+    updatedAt: "",
+  });
 
   useEffect(() => {
-    fetchCategories()
-    if (params.id) {
-      fetchSubcategory(params.id as string)
-    }
-  }, [params.id])
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await fetchCategories();
+        if (subcategoryId) {
+          await fetchSubcategory(subcategoryId);
+        }
+      } catch (err: any) {
+        console.error("Error loading data:", err);
+        setError(err.message || "Failed to load page data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [subcategoryId]);
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/categories")
-      if (response.ok) {
-        const data = await response.json()
-        setCategories(data)
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error)
+      const response = await categoriesService.getCategories({ status: "active" });
+      setCategories(response.categories || []);
+    } catch (err: any) {
+      console.error("Error fetching categories:", err);
+      throw new Error("Failed to load parent categories.");
     }
-  }
+  };
 
   const fetchSubcategory = async (id: string) => {
     try {
-      const response = await fetch(`/api/subcategories/${id}`)
-      if (response.ok) {
-        const subcategory = await response.json()
-        setFormData(subcategory)
-        if (subcategory.image) {
-          setImagePreview(subcategory.image)
-        }
+      const subcategory = await subcategoriesService.getSubcategoryById(id);
+      // Ensure categoryId is a string if it's an object with _id (populated)
+      setFormData({
+        ...subcategory,
+        categoryId: typeof subcategory.categoryId === 'object' && subcategory.categoryId !== null
+          ? subcategory.categoryId._id
+          : subcategory.categoryId // If already a string
+      });
+      if (subcategory.image) {
+        setImagePreview(subcategory.image);
       }
-    } catch (error) {
-      console.error("Error fetching subcategory:", error)
+    } catch (err: any) {
+      console.error("Error fetching subcategory:", err);
+      throw new Error("Failed to fetch subcategory details.");
     }
-  }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setImagePreview(reader.result as string)
-      reader.readAsDataURL(file)
+      setImageFile(file); // Store the new file
+      const reader = new FileReader();
+      reader.onload = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file); // For instant preview
     }
-  }
+  };
 
   const removeImage = () => {
-    setImagePreview(null)
-  }
+    setImageFile(null); // Clear new file selection
+    setImagePreview(null); // Remove preview
+    setFormData((prev) => ({ ...prev, image: undefined })); // Explicitly set image to undefined for backend to handle
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsSaving(true);
+    setError(null);
+
+    if (!formData.categoryId) {
+      setError("Please select a parent category.");
+      setIsSaving(false);
+      return;
+    }
 
     try {
-      const submitData = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        submitData.append(key, value)
-      })
-
-      const response = await fetch(`/api/subcategories/${params.id}`, {
-        method: "PUT",
-        body: submitData,
-      })
-
-      if (response.ok) {
-        router.push("/dashboard/subcategories")
-      } else {
-        console.error("Failed to update subcategory")
+      let imageForUpload: string | null | undefined = undefined; // undefined: no change, string: new image, null: remove image
+      if (imageFile) {
+        // New image file selected
+        const reader = new FileReader();
+        const fileToBase64Promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        imageForUpload = await fileToBase64Promise;
+      } else if (imagePreview === null && formData.image) {
+        // Image was present and now removed (imagePreview is null, but formData.image was something)
+        imageForUpload = null;
+      } else if (imagePreview === formData.image) {
+        // Image was present and not changed
+        imageForUpload = undefined; // Do not send image data
       }
-    } catch (error) {
-      console.error("Error updating subcategory:", error)
+
+      const updateData: UpdateSubcategoryData = {
+        id: formData._id,
+        title: formData.title,
+        description: formData.description,
+        categoryId: formData.categoryId as string, // Ensure categoryId is a string
+        seoKeywords: formData.seoKeywords,
+        tags: formData.tags,
+        status: formData.status,
+        image: imageForUpload, // Pass the processed image data
+      };
+
+      await subcategoriesService.updateSubcategory(updateData);
+      router.push("/admin/subcategories");
+    } catch (err: any) {
+      console.error("Error updating subcategory:", err);
+      setError(err.message || "Failed to update subcategory.");
     } finally {
-      setIsLoading(false)
+      setIsSaving(false);
     }
+  };
+
+  if (isLoading) {
+    return (
+      <AdminRouteGuard>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading subcategory details...</p>
+          </div>
+        </div>
+      </div>
+      </AdminRouteGuard>
+    );
   }
 
+  // Handle case where subcategory not found or ID is invalid after initial load
+  if (!formData._id && !isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
+        <h2 className="text-xl font-bold">Subcategory Not Found</h2>
+        <p className="text-muted-foreground mt-2">The subcategory you are looking for does not exist or has been deleted.</p>
+        <Button asChild className="mt-4">
+          <Link href="/dashboard/subcategories">Go to Subcategories List</Link>
+        </Button>
+      </div>
+    );
+  }
+
+
   return (
+    <AdminRouteGuard>
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <Button variant="outline" size="icon" asChild className="w-fit">
@@ -132,6 +202,13 @@ export default function EditSubcategoryPage() {
           <p className="text-muted-foreground text-sm sm:text-base">Update subcategory information.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-2">
@@ -146,18 +223,23 @@ export default function EditSubcategoryPage() {
                   Parent Category *
                 </Label>
                 <Select
-                  value={formData.categoryId}
+                  value={formData.categoryId as string} // Ensure it's a string for the Select component
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
+                  required
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.title}
-                      </SelectItem>
-                    ))}
+                    {categories.length === 0 ? (
+                      <SelectItem value="" disabled>No categories available</SelectItem>
+                    ) : (
+                      categories.map((category) => (
+                        <SelectItem key={category._id} value={category._id}>
+                          {category.title}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -190,24 +272,6 @@ export default function EditSubcategoryPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-sm font-medium">
-                  Status
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="seoKeywords" className="text-sm font-medium">
@@ -234,6 +298,24 @@ export default function EditSubcategoryPage() {
                     className="w-full"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-sm font-medium">
+                  Status
+                </Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "active" | "inactive") => setFormData((prev) => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -286,8 +368,8 @@ export default function EditSubcategoryPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-          <Button type="submit" disabled={isLoading || !formData.categoryId} className="w-full sm:w-auto">
-            {isLoading ? "Updating..." : "Update Subcategory"}
+          <Button type="submit" disabled={isSaving || !formData.categoryId || !formData.title || !formData.description} className="w-full sm:w-auto">
+            {isSaving ? "Updating..." : "Update Subcategory"}
           </Button>
           <Button variant="outline" asChild className="w-full sm:w-auto">
             <Link href="/dashboard/subcategories">Cancel</Link>
@@ -295,5 +377,6 @@ export default function EditSubcategoryPage() {
         </div>
       </form>
     </div>
-  )
+    </AdminRouteGuard>
+  );
 }

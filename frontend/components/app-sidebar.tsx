@@ -36,80 +36,80 @@ import {
 const data = {
   navMain: [
     {
-      title: "Dashboard",
-      url: "/dashboard",
+      title: "Admin",
+      url: "/admin",
       icon: LayoutDashboard,
       isActive: false,
     },
     {
       title: "Categories",
-      url: "/dashboard/categories",
+      url: "/admin/categories",
       icon: Tags,
       isActive: false,
       items: [
         {
           title: "View Categories",
-          url: "/dashboard/categories",
+          url: "/admin/categories",
           icon: Eye,
         },
         {
           title: "Add Category",
-          url: "/dashboard/addcategory",
+          url: "/admin/addcategory",
           icon: Plus,
         },
       ],
     },
     {
       title: "Subcategories",
-      url: "/dashboard/subcategories",
+      url: "/admin/subcategories",
       icon: Building2,
       isActive: false,
       items: [
         {
           title: "View Subcategories",
-          url: "/dashboard/subcategories",
+          url: "/admin/subcategories",
           icon: Eye,
         },
         {
           title: "Add Subcategory",
-          url: "/dashboard/add-subcategory",
+          url: "/admin/add-subcategory",
           icon: Plus,
         },
       ],
     },
     {
       title: "Products",
-      url: "/dashboard/products",
+      url: "/admin/products",
       icon: Package,
       isActive: false,
       items: [
         {
           title: "View Products",
-          url: "/dashboard/products",
+          url: "/admin/products",
           icon: Eye,
         },
         {
           title: "Add Product",
-          url: "/dashboard/add-product",
+          url: "/admin/add-product",
           icon: Plus,
         },
       ],
     },
     {
       title: "Users",
-      url: "/dashboard/users",
+      url: "/admin/users",
       icon: Users,
       isActive: false,
     },
     {
       title: "Contacts",
-      url: "/dashboard/contacts",
+      url: "/admin/contacts",
       icon: MessageSquare,
       isActive: false,
     },
     {
       title: "Settings",
-      url: "/dashboard/settings",
+      url: "/admin/settings",
       icon: Settings,
       isActive: false,
     },
@@ -125,7 +125,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard">
+              <Link href="/admin">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <LayoutDashboard className="size-4" />
                 </div>

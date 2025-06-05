@@ -310,6 +310,7 @@ import {
   validate // The middleware function to process validation results
 } from '../middleware/validate';
 import { authActionLimiter, otpGenerationLimiter } from '../middleware/rateLimiter';
+import { protect } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -366,6 +367,21 @@ router.post(
     emailOnlyRules(),
     validate,
     AuthController.resendForgotPasswordOtp
+);
+// --- Get Authenticated User Details ---
+// This route is protected. Only authenticated users can access it.
+router.get(
+    '/me',
+    protect, // Apply the protect middleware here
+    AuthController.getUserDetails
+);
+
+// --- Refresh Access Token ---
+// This route uses the refresh token (typically from an HttpOnly cookie) to get a new access token.
+// It's usually not protected by the JWT 'protect' middleware itself, as the access token might be expired.
+router.post(
+    '/refresh-token',
+    AuthController.refreshTokenHandler
 );
 
 export default router;

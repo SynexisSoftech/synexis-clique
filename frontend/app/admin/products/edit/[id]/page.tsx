@@ -1,277 +1,327 @@
-"use client"
+"use client"; // Ensures this is treated as a client component
 
-import type React from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// import { Checkbox } from "@/components/ui/checkbox"; // Not used in this version for core fields
+import { Badge } from "@/components/ui/badge"; // Potentially for displaying tags or other multi-value fields
+import { ArrowLeft, X, Plus, Trash2 } from "lucide-react"; // Icons
+import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
+import { Switch } from "@/components/ui/switch";
+import Image from "next/image"; // For displaying product images
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, X, Plus, Trash2 } from "lucide-react"
-import Link from "next/link"
-import { useRouter, useParams } from "next/navigation"
+// --- Service Imports ---
+// Ensure these paths are correct relative to your file
+import {
+  productsService,
+  Product as ServiceProduct, // Main product type from service
+  UpdateProductData,
+  // CreateProductData, // Not used for edit, but good to have if merging add/edit later
+} from "../../../../../service/ProductsService"; // Adjusted path
 
-interface Category {
-  id: string
-  title: string
+// Assuming CategoryService and SubcategoryService exist and are structured similarly
+// You'll need to create these services if they don't exist
+import {
+  categoriesService,
+  Category as ServiceCategory, // Category type from your service
+} from "../../../../../service/categoryApi"; // Example path, adjust as needed
+import {
+  subcategoriesService,
+  Subcategory as ServiceSubcategory, // Subcategory type from your service
+} from "../../../../../service/subcategories"; // Example path, adjust as needed
+
+// --- Local Interfaces (if needed for form structure beyond service types) ---
+
+// Form data structure - primarily derived from ServiceProduct, but with stringified numbers for inputs
+interface EditProductFormData {
+  _id: string;
+  title: string;
+  description: string;
+  price: string; // Stored as string in form, converted to number on submit
+  sku?: string;
+  stock: string; // Stored as string in form, converted to number on submit
+  categoryId: string;
+  subcategoryId?: string;
+  brand?: string;
+  status: "active" | "inactive" | "draft";
+  tags?: string; // Comma-separated
+  seoKeywords?: string; // Comma-separated
+  isFeatured?: boolean;
+  weight?: string; // Stored as string, converted to number
+  dimensions?: {
+    length: string;
+    width: string;
+    height: string;
+  };
+  // The following fields were in your original EditProductFormData
+  // They are not part of the standard ServiceProduct based on the previous example.
+  // If they ARE part of your ServiceProduct or UpdateProductData, uncomment and use them.
+  // Otherwise, they are form-only fields unless your backend service is updated.
+  // shortDescription?: string;
+  // discountPrice?: string;
+  // features?: string;
+  // returnPolicy?: string;
+  // warranty?: string;
+  // material?: string;
 }
-
-interface Subcategory {
-  id: string
-  title: string
-  categoryId: string
-}
-
-interface CustomDetail {
-  id: string
-  label: string
-  value: string
-}
-
-interface Product {
-  id: string
-  title: string
-  categoryId: string
-  subcategoryId: string
-  description: string
-  shortDescription: string
-  originalPrice: string
-  discountPrice: string
-  stockQuantity: string
-  features: string
-  colors: string[]
-  sizes: string[]
-  brand: string
-  seoKeywords: string
-  tags: string
-  returnPolicy: string
-  warranty: string
-  weight: string
-  dimensions: string
-  material: string
-  status: string
-  customDetails: CustomDetail[]
-}
-
-const predefinedSizes = ["XS", "S", "M", "L", "XL", "XXL"]
-const predefinedColors = [
-  { name: "Black", value: "#000000" },
-  { name: "White", value: "#FFFFFF" },
-  { name: "Gray", value: "#808080" },
-  { name: "Red", value: "#FF0000" },
-  { name: "Blue", value: "#0000FF" },
-  { name: "Green", value: "#008000" },
-]
 
 export default function EditProductPage() {
-  const router = useRouter()
-  const params = useParams()
-  const [isLoading, setIsLoading] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
-  const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [customColor, setCustomColor] = useState("")
-  const [customSize, setCustomSize] = useState("")
-  const [customDetails, setCustomDetails] = useState<CustomDetail[]>([])
-  const [newDetailLabel, setNewDetailLabel] = useState("")
-  const [newDetailValue, setNewDetailValue] = useState("")
+  const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
 
-  const [formData, setFormData] = useState<Product>({
-    id: "",
+  const [isLoading, setIsLoading] = useState(false); // For form submission
+  const [isFetchingProduct, setIsFetchingProduct] = useState(true); // For initial product load
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<ServiceSubcategory[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<ServiceSubcategory[]>([]);
+
+  // Image management
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // URLs from fetched product
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]); // Base64 for new images to upload
+
+  const [formData, setFormData] = useState<Partial<EditProductFormData>>({
     title: "",
-    categoryId: "",
-    subcategoryId: "",
     description: "",
-    shortDescription: "",
-    originalPrice: "",
-    discountPrice: "",
-    stockQuantity: "",
-    features: "",
-    colors: [],
-    sizes: [],
-    brand: "",
-    seoKeywords: "",
-    tags: "",
-    returnPolicy: "",
-    warranty: "",
-    weight: "",
-    dimensions: "",
-    material: "",
-    status: "active",
-    customDetails: [],
-  })
+    price: "0",
+    stock: "0",
+    categoryId: "",
+    status: "draft",
+    isFeatured: false,
+    dimensions: { length: "0", width: "0", height: "0" },
+  });
+  const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
-    fetchCategories()
-    fetchSubcategories()
-    if (params.id) {
-      fetchProduct(params.id as string)
-    }
-  }, [params.id])
+    const fetchData = async () => {
+      setIsFetchingProduct(true);
+      setError(null);
+      try {
+        // Fetch categories and subcategories using services
+        const [categoriesResponse, subcategoriesResponse] = await Promise.all([
+          categoriesService.getCategories({ limit: 1000, status: "active" }), // Assuming getCategories supports params
+          subcategoriesService.getSubcategories({ limit: 1000, status: "active" }), // Assuming getSubcategories supports params
+        ]);
+
+        setCategories(categoriesResponse.categories || []); // Adjust based on actual service response structure
+        setSubcategories(subcategoriesResponse.subcategories || []); // Adjust based on actual service response structure
+
+        if (productId) {
+          const product = await productsService.getProductById(productId);
+          setFormData({
+            _id: product._id,
+            title: product.title,
+            description: product.description,
+            price: product.price.toString(),
+            sku: product.sku,
+            stock: product.stock.toString(),
+            // Ensure categoryId and subcategoryId are correctly assigned as strings
+            categoryId: typeof product.categoryId === 'string' ? product.categoryId : product.categoryId._id,
+            subcategoryId: product.subcategoryId ? (typeof product.subcategoryId === 'string' ? product.subcategoryId : product.subcategoryId._id) : undefined,
+            brand: product.brand,
+            status: product.status,
+            tags: product.tags, // Assuming tags is a string. If array, .join(', ')
+            seoKeywords: product.seoKeywords, // Assuming seoKeywords is a string. If array, .join(', ')
+            isFeatured: product.isFeatured || false,
+            weight: product.weight?.toString() || "",
+            dimensions: product.dimensions
+              ? {
+                  length: product.dimensions.length.toString(),
+                  width: product.dimensions.width.toString(),
+                  height: product.dimensions.height.toString(),
+                }
+              : { length: "", width: "", height: "" },
+          });
+          setExistingImageUrls(product.images || []);
+        }
+      } catch (err: any) {
+        console.error("Error fetching initial data:", err);
+        setError(err.message || "Failed to load data. Please try again.");
+        // Optionally redirect or show a more prominent error
+      } finally {
+        setIsFetchingProduct(false);
+      }
+    };
+
+    fetchData();
+  }, [productId]);
 
   useEffect(() => {
-    if (formData.categoryId) {
-      const filtered = subcategories.filter((sub) => sub.categoryId === formData.categoryId)
-      setFilteredSubcategories(filtered)
+    if (formData.categoryId && subcategories.length > 0) {
+      const filtered = subcategories.filter(
+        (sub) => (typeof sub.categoryId === 'string' ? sub.categoryId : sub.categoryId?._id) === formData.categoryId
+      );
+      setFilteredSubcategories(filtered);
+
+      // Optional: Reset subcategory if current one doesn't belong to the new category
+      if (formData.subcategoryId && !filtered.find(s => s._id === formData.subcategoryId)) {
+        setFormData(prev => ({ ...prev, subcategoryId: undefined }));
+      }
+
     } else {
-      setFilteredSubcategories([])
-    }
-  }, [formData.categoryId, subcategories])
-
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch("/api/categories")
-      if (response.ok) {
-        const data = await response.json()
-        setCategories(data)
+      setFilteredSubcategories([]);
+      if (formData.categoryId) { // If category is selected but no subcategories loaded yet or match
+         setFormData(prev => ({ ...prev, subcategoryId: undefined }));
       }
-    } catch (error) {
-      console.error("Error fetching categories:", error)
     }
-  }
+  }, [formData.categoryId, subcategories, formData.subcategoryId]); // Added formData.subcategoryId to deps for reset logic
 
-  const fetchSubcategories = async () => {
-    try {
-      const response = await fetch("/api/subcategories")
-      if (response.ok) {
-        const data = await response.json()
-        setSubcategories(data)
-      }
-    } catch (error) {
-      console.error("Error fetching subcategories:", error)
-    }
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const fetchProduct = async (id: string) => {
-    try {
-      const response = await fetch(`/api/products/${id}`)
-      if (response.ok) {
-        const product = await response.json()
-        setFormData(product)
-        setCustomDetails(product.customDetails || [])
-      }
-    } catch (error) {
-      console.error("Error fetching product:", error)
+  const handleDimensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target; // name will be "length", "width", or "height"
+    setFormData((prev) => ({
+      ...prev,
+      dimensions: {
+        ...prev.dimensions!,
+        [name]: value,
+      },
+    }));
+  };
+
+  const handleSelectChange = (name: keyof EditProductFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "categoryId") {
+        // When category changes, reset subcategory field
+        setFormData((prevForm) => ({ ...prevForm, subcategoryId: "" }));
     }
-  }
+  };
+
+  const handleSwitchChange = (name: keyof EditProductFormData, checked: boolean) => {
+    setFormData((prev) => ({ ...prev, [name]: checked }));
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+    const files = Array.from(e.target.files || []);
     if (files.length > 0) {
+      const currentNewPreviews = [...newImagePreviews]; // operate on a copy
+      let filesProcessed = 0;
+
       files.forEach((file) => {
-        const reader = new FileReader()
-        reader.onload = () => setImagePreviews((prev) => [...prev, reader.result as string])
-        reader.readAsDataURL(file)
-      })
+        const reader = new FileReader();
+        reader.onload = () => {
+          currentNewPreviews.push(reader.result as string);
+          filesProcessed++;
+          if (filesProcessed === files.length) { // All files read
+            setNewImagePreviews(currentNewPreviews);
+          }
+        };
+        reader.onerror = () => {
+            filesProcessed++; // count error as processed to not hang
+            console.error("Error reading file");
+            if (filesProcessed === files.length) {
+              setNewImagePreviews(currentNewPreviews); // update with successfully read files
+            }
+        };
+        reader.readAsDataURL(file);
+      });
     }
-  }
+  };
 
-  const removeImage = (index: number) => {
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
-  }
+  const removeNewImagePreview = (index: number) => {
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const handleColorChange = (color: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      colors: checked ? [...prev.colors, color] : prev.colors.filter((c) => c !== color),
-    }))
-  }
+  const removeExistingImage = (imageUrlToRemove: string) => {
+    // This removes the image from the displayed existing images.
+    // The handleSubmit logic will determine how this translates to the API call.
+    setExistingImageUrls((prev) => prev.filter(url => url !== imageUrlToRemove));
+    // User needs to save to make this permanent.
+    // alert("Image removed from list. Save changes to make it permanent. If no new images are added and this was the last image, all images will be cleared.");
+  };
 
-  const addCustomColor = () => {
-    if (customColor && !formData.colors.includes(customColor)) {
-      setFormData((prev) => ({
-        ...prev,
-        colors: [...prev.colors, customColor],
-      }))
-      setCustomColor("")
-    }
-  }
-
-  const handleSizeChange = (size: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      sizes: checked ? [...prev.sizes, size] : prev.sizes.filter((s) => s !== size),
-    }))
-  }
-
-  const addCustomSize = () => {
-    if (customSize && !formData.sizes.includes(customSize)) {
-      setFormData((prev) => ({
-        ...prev,
-        sizes: [...prev.sizes, customSize],
-      }))
-      setCustomSize("")
-    }
-  }
-
-  const removeColor = (color: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      colors: prev.colors.filter((c) => c !== color),
-    }))
-  }
-
-  const removeSize = (size: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      sizes: prev.sizes.filter((s) => s !== size),
-    }))
-  }
-
-  const addCustomDetail = () => {
-    if (newDetailLabel && newDetailValue) {
-      const newDetail: CustomDetail = {
-        id: Date.now().toString(),
-        label: newDetailLabel,
-        value: newDetailValue,
-      }
-      setCustomDetails((prev) => [...prev, newDetail])
-      setNewDetailLabel("")
-      setNewDetailValue("")
-    }
-  }
-
-  const removeCustomDetail = (id: string) => {
-    setCustomDetails((prev) => prev.filter((detail) => detail.id !== id))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    if (!productId || !formData._id) {
+      setError("Product ID is missing. Cannot update.");
+      return;
+    }
+    // Basic Validations (add more as needed)
+    if (!formData.title?.trim()) {
+        setError("Product Title is required.");
+        return;
+    }
+    if (!formData.categoryId) {
+        setError("Category is required.");
+        return;
+    }
+    if (isNaN(parseFloat(formData.price || "")) || parseFloat(formData.price || "") < 0) {
+        setError("Valid Price is required.");
+        return;
+    }
+     if (isNaN(parseInt(formData.stock || "", 10)) || parseInt(formData.stock || "", 10) < 0) {
+        setError("Valid Stock Quantity is required.");
+        return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const updatePayload: UpdateProductData = {
+      id: formData._id,
+      title: formData.title!,
+      description: formData.description!,
+      price: parseFloat(formData.price || "0"),
+      stock: parseInt(formData.stock || "0", 10),
+      categoryId: formData.categoryId!,
+      ...(formData.subcategoryId && { subcategoryId: formData.subcategoryId }),
+      ...(formData.sku && { sku: formData.sku }),
+      ...(formData.brand && { brand: formData.brand }),
+      status: formData.status || "draft",
+      ...(formData.tags && { tags: formData.tags }), // Assuming service expects string
+      ...(formData.seoKeywords && { seoKeywords: formData.seoKeywords }), // Assuming service expects string
+      isFeatured: formData.isFeatured || false,
+      ...(formData.weight && parseFloat(formData.weight) && !isNaN(parseFloat(formData.weight)) && { weight: parseFloat(formData.weight) }),
+      ...(formData.dimensions && {
+        dimensions: {
+          length: parseFloat(formData.dimensions.length || "0"),
+          width: parseFloat(formData.dimensions.width || "0"),
+          height: parseFloat(formData.dimensions.height || "0"),
+        },
+      }),
+    };
+
+    // Image handling strategy:
+    // 1. If new images are added, they replace ALL existing images. Send new base64s.
+    // 2. If no new images are added, but ALL existing images were removed by the user, send `null` to clear images.
+    // 3. If no new images are added, and some existing images remain, send `undefined` to make no changes to images.
+    if (newImagePreviews.length > 0) {
+      updatePayload.images = newImagePreviews;
+    } else if (existingImageUrls.length === 0 && newImagePreviews.length === 0) { // All images (existing and new) are gone
+      updatePayload.images = null; // Signal to backend to remove all images
+    } else {
+      // No new images were added, and some existing ones might still be there (or all if none were touched).
+      // To keep the remaining existing images (if any), we send undefined for the 'images' field
+      // This assumes the backend won't clear images if the field is not present in the payload.
+      // If your backend *requires* existing image URLs to be sent back to preserve them, this logic needs adjustment.
+      updatePayload.images = undefined;
+    }
 
     try {
-      const submitData = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          submitData.append(key, JSON.stringify(value))
-        } else {
-          submitData.append(key, value.toString())
-        }
-      })
-
-      // Add custom details
-      submitData.append("customDetails", JSON.stringify(customDetails))
-
-      const response = await fetch(`/api/products/${params.id}`, {
-        method: "PUT",
-        body: submitData,
-      })
-
-      if (response.ok) {
-        router.push("/dashboard/products")
-      } else {
-        console.error("Failed to update product")
-      }
-    } catch (error) {
-      console.error("Error updating product:", error)
+      await productsService.updateProduct(updatePayload);
+      router.push("/dashboard/products"); // Navigate back to products list
+      // Consider adding a success toast/message here
+    } catch (err: any) {
+      console.error("Error updating product:", err);
+      setError(err.message || "Failed to update product. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
+  };
+
+  if (isFetchingProduct) {
+    return <div className="container mx-auto p-6 text-center">Loading product details...</div>;
   }
 
   return (
@@ -284,438 +334,179 @@ export default function EditProductPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Edit Product</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Update product information.</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Update information for: {formData.title || "product..."}
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Product Information</CardTitle>
-              <CardDescription className="text-sm">Update basic details about your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-sm font-medium">
-                  Category *
-                </Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
-              <div className="space-y-2">
-                <Label htmlFor="subcategory" className="text-sm font-medium">
-                  Subcategory *
-                </Label>
-                <Select
-                  value={formData.subcategoryId}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, subcategoryId: value }))}
-                  disabled={!formData.categoryId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a subcategory" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredSubcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium">
-                  Product Title *
-                </Label>
-                <Input
-                  id="title"
-                  placeholder="Enter product title"
-                  value={formData.title}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  required
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="shortDescription" className="text-sm font-medium">
-                  Short Description
-                </Label>
-                <Textarea
-                  id="shortDescription"
-                  placeholder="Brief product description"
-                  className="min-h-[60px] w-full resize-none"
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">
-                  Description *
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter product description"
-                  className="min-h-[80px] sm:min-h-[100px] w-full resize-none"
-                  value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="brand" className="text-sm font-medium">
-                    Brand
-                  </Label>
-                  <Input
-                    id="brand"
-                    placeholder="Enter brand name"
-                    value={formData.brand}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, brand: e.target.value }))}
-                    className="w-full"
-                  />
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Information</CardTitle>
+                <CardDescription>Update basic details about your product.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Product Title *</Label>
+                  <Input id="title" name="title" value={formData.title || ""} onChange={handleInputChange} required />
                 </div>
+                <div>
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea id="description" name="description" value={formData.description || ""} onChange={handleInputChange} rows={5} required />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="categoryId">Category *</Label>
+                    <Select value={formData.categoryId || ""} onValueChange={(value) => handleSelectChange("categoryId", value)} required>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        {categories.length === 0 && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                        {categories.map(cat => <SelectItem key={cat._id} value={cat._id}>{cat.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="subcategoryId">Subcategory</Label>
+                    <Select value={formData.subcategoryId || ""} onValueChange={(value) => handleSelectChange("subcategoryId", value)} disabled={!formData.categoryId || filteredSubcategories.length === 0}>
+                      <SelectTrigger><SelectValue placeholder="Select subcategory" /></SelectTrigger>
+                      <SelectContent>
+                        {filteredSubcategories.length === 0 && formData.categoryId && <SelectItem value="no-subs" disabled>No subcategories</SelectItem>}
+                        {filteredSubcategories.map(sub => <SelectItem key={sub._id} value={sub._id}>{sub.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="brand">Brand</Label>
+                  <Input id="brand" name="brand" value={formData.brand || ""} onChange={handleInputChange} />
+                </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium">
-                    Status
-                  </Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
+            <Card>
+              <CardHeader><CardTitle>Pricing & Stock</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price">Price *</Label>
+                    <Input id="price" name="price" type="number" step="0.01" value={formData.price || ""} onChange={handleInputChange} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="stock">Stock Quantity *</Label>
+                    <Input id="stock" name="stock" type="number" step="1" value={formData.stock || ""} onChange={handleInputChange} required />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
+                  <Input id="sku" name="sku" value={formData.sku || ""} onChange={handleInputChange} />
+                </div>
+              </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader><CardTitle>Images</CardTitle></CardHeader>
+                <CardContent>
+                    <Label htmlFor="images">Add New Images</Label>
+                    <Input id="images" type="file" multiple onChange={handleImageUpload} accept="image/*" className="mb-4" />
+                    
+                    {newImagePreviews.length > 0 && <Label className="block mb-2 text-sm font-medium">New Images Preview:</Label>}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+                        {newImagePreviews.map((previewUrl, index) => (
+                            <div key={`new-${index}`} className="relative group aspect-square">
+                                <Image src={previewUrl} alt={`New preview ${index + 1}`} layout="fill" className="rounded object-cover" />
+                                <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-75 group-hover:opacity-100 z-10" onClick={() => removeNewImagePreview(index)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {existingImageUrls.length > 0 && <Label className="block mb-2 text-sm font-medium">Current Images:</Label>}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {existingImageUrls.map((imageUrl, index) => (
+                            <div key={`existing-${index}`} className="relative group aspect-square">
+                                <Image src={imageUrl} alt={`Existing image ${index + 1}`} layout="fill" className="rounded object-cover" />
+                                <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-75 group-hover:opacity-100 z-10" onClick={() => removeExistingImage(imageUrl)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Adding new images will replace all current images upon saving.
+                        To remove all images, clear new and current images, then save.
+                    </p>
+                </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Organization & Advanced */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Organization</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status || "draft"} onValueChange={(value) => handleSelectChange("status", value as "active" | "inactive" | "draft")}>
+                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Custom Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Custom Details</CardTitle>
-              <CardDescription className="text-sm">Add custom product specifications and details.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="detailLabel">Detail Label</Label>
-                  <Input
-                    id="detailLabel"
-                    placeholder="e.g., Screen Size, Battery Life"
-                    value={newDetailLabel}
-                    onChange={(e) => setNewDetailLabel(e.target.value)}
-                  />
+                <div>
+                  <Label htmlFor="tags">Tags (comma-separated)</Label>
+                  <Input id="tags" name="tags" value={formData.tags || ""} onChange={handleInputChange} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="detailValue">Detail Value</Label>
-                  <Input
-                    id="detailValue"
-                    placeholder="e.g., 6.1 inches, 24 hours"
-                    value={newDetailValue}
-                    onChange={(e) => setNewDetailValue(e.target.value)}
-                  />
+                <div className="flex items-center space-x-2 pt-2">
+                  <Switch id="isFeatured" checked={formData.isFeatured || false} onCheckedChange={(checked) => handleSwitchChange("isFeatured", checked)} />
+                  <Label htmlFor="isFeatured" className="cursor-pointer">Featured Product</Label>
                 </div>
-              </div>
-              <Button type="button" onClick={addCustomDetail} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Custom Detail
-              </Button>
+              </CardContent>
+            </Card>
 
-              {customDetails.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Custom Details</Label>
-                  <div className="space-y-2">
-                    {customDetails.map((detail) => (
-                      <div key={detail.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <span className="font-medium">{detail.label}:</span> {detail.value}
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeCustomDetail(detail.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+            <Card>
+              <CardHeader><CardTitle>Shipping & SEO</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="weight">Weight (kg)</Label>
+                  <Input id="weight" name="weight" type="number" step="0.01" value={formData.weight || ""} onChange={handleInputChange} />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Pricing & Stock */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Pricing & Stock</CardTitle>
-              <CardDescription className="text-sm">Update pricing and inventory details.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="originalPrice" className="text-sm font-medium">
-                    Original Price *
-                  </Label>
-                  <Input
-                    id="originalPrice"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.originalPrice}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, originalPrice: e.target.value }))}
-                    required
-                    className="w-full"
-                  />
+                <Label>Dimensions (cm)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Input name="length" placeholder="L" type="number" step="0.1" value={formData.dimensions?.length || ""} onChange={handleDimensionChange} />
+                  <Input name="width" placeholder="W" type="number" step="0.1" value={formData.dimensions?.width || ""} onChange={handleDimensionChange} />
+                  <Input name="height" placeholder="H" type="number" step="0.1" value={formData.dimensions?.height || ""} onChange={handleDimensionChange} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="discountPrice" className="text-sm font-medium">
-                    Discount Price
-                  </Label>
-                  <Input
-                    id="discountPrice"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.discountPrice}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, discountPrice: e.target.value }))}
-                    className="w-full"
-                  />
+                <div>
+                  <Label htmlFor="seoKeywords">SEO Keywords (comma-separated)</Label>
+                  <Input id="seoKeywords" name="seoKeywords" value={formData.seoKeywords || ""} onChange={handleInputChange} />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stockQuantity" className="text-sm font-medium">
-                  Stock Quantity *
-                </Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  placeholder="0"
-                  value={formData.stockQuantity}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, stockQuantity: e.target.value }))}
-                  required
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="features" className="text-sm font-medium">
-                  Product Features
-                </Label>
-                <Textarea
-                  id="features"
-                  placeholder="List key features"
-                  value={formData.features}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, features: e.target.value }))}
-                  className="min-h-[60px] sm:min-h-[80px] w-full resize-none"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Colors & Sizes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Colors & Sizes</CardTitle>
-              <CardDescription className="text-sm">Update available colors and sizes.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Colors</Label>
-                <div className="space-y-3">
-                  {predefinedColors.map((color) => (
-                    <div key={color.name} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={color.name}
-                        checked={formData.colors.includes(color.value)}
-                        onCheckedChange={(checked) => handleColorChange(color.value, checked as boolean)}
-                      />
-                      <div className="w-4 h-4 rounded border" style={{ backgroundColor: color.value }} />
-                      <Label htmlFor={color.name} className="text-sm">
-                        {color.name}
-                      </Label>
-                    </div>
-                  ))}
-
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                    <Input
-                      type="color"
-                      value={customColor}
-                      onChange={(e) => setCustomColor(e.target.value)}
-                      className="w-12 h-8 p-0 border-0"
-                    />
-                    <Input
-                      placeholder="Custom color"
-                      value={customColor}
-                      onChange={(e) => setCustomColor(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button type="button" size="sm" onClick={addCustomColor} className="w-full sm:w-auto">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {formData.colors.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.colors.map((color) => (
-                      <Badge key={color} variant="secondary" className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: color }} />
-                        {predefinedColors.find((c) => c.value === color)?.name || color}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeColor(color)} />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Sizes</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {predefinedSizes.map((size) => (
-                    <div key={size} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={size}
-                        checked={formData.sizes.includes(size)}
-                        onCheckedChange={(checked) => handleSizeChange(size, checked as boolean)}
-                      />
-                      <Label htmlFor={size} className="text-sm">
-                        {size}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                  <Input
-                    placeholder="Custom size"
-                    value={customSize}
-                    onChange={(e) => setCustomSize(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button type="button" size="sm" onClick={addCustomSize} className="w-full sm:w-auto">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {formData.sizes.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.sizes.map((size) => (
-                      <Badge key={size} variant="secondary" className="flex items-center gap-1">
-                        {size}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeSize(size)} />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* SEO & Additional Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">SEO & Additional Information</CardTitle>
-              <CardDescription className="text-sm">Update SEO and customer information.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="seoKeywords" className="text-sm font-medium">
-                    SEO Keywords
-                  </Label>
-                  <Input
-                    id="seoKeywords"
-                    placeholder="keyword1, keyword2"
-                    value={formData.seoKeywords}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, seoKeywords: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tags" className="text-sm font-medium">
-                    Tags
-                  </Label>
-                  <Input
-                    id="tags"
-                    placeholder="tag1, tag2"
-                    value={formData.tags}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="returnPolicy" className="text-sm font-medium">
-                    Return Policy
-                  </Label>
-                  <Textarea
-                    id="returnPolicy"
-                    placeholder="Describe return policy"
-                    value={formData.returnPolicy}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, returnPolicy: e.target.value }))}
-                    className="min-h-[60px] w-full resize-none"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="warranty" className="text-sm font-medium">
-                    Warranty
-                  </Label>
-                  <Textarea
-                    id="warranty"
-                    placeholder="Describe warranty terms"
-                    value={formData.warranty}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, warranty: e.target.value }))}
-                    className="min-h-[60px] w-full resize-none"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-          <Button
-            type="submit"
-            disabled={isLoading || !formData.categoryId || !formData.subcategoryId}
-            className="w-full sm:w-auto"
-          >
-            {isLoading ? "Updating..." : "Update Product"}
-          </Button>
-          <Button variant="outline" asChild className="w-full sm:w-auto">
-            <Link href="/dashboard/products">Cancel</Link>
+        <div className="flex justify-end space-x-3 pt-4 sticky bottom-0 bg-background py-4 border-t">
+          <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>Cancel</Button>
+          <Button type="submit" disabled={isLoading || isFetchingProduct}>
+            {isLoading ? "Saving..." : "Save Product"}
           </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

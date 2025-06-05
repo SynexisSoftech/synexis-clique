@@ -1,4 +1,4 @@
-import { Request,Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import UserModel, { IUser, UserRole } from '../models/user.model'; // Adjust path as per your project structure
 
@@ -37,7 +37,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
             // 4. Fetch user details from database using userId from token
             // Exclude password from being attached to the request object
-            const currentUser = await UserModel.findById(decoded.userId).select('-password');
+            const currentUser = await UserModel.findById(decoded.userId).select('-password -passwordResetOTP -passwordResetExpires -__v'); // Exclude sensitive fields
 
             if (!currentUser) {
                 res.status(401).json({ message: 'Not authorized: User belonging to this token no longer exists.' });

@@ -98,6 +98,7 @@ export interface IProduct {
   material?: string
   images: File[]
   customDetails?: ICustomDetail[]
+  cashOnDelivery: boolean // Add this field
   status: "active" | "inactive" | "out-of-stock"
   createdBy?: string
   createdAt: string
@@ -125,6 +126,7 @@ export interface IProductFormData {
   dimensions: string
   material: string
   images: File[]
+  cashOnDelivery: boolean // Add this field
 }
 
 // Contact Types

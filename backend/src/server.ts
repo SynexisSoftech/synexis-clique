@@ -7,7 +7,8 @@ import { setupSwagger } from '../swagger'; // ✅ Import Swagger setup
 import cors from 'cors';
 import contactUsRoutes from './routes/contactus.routes';
  // Add this line to import category routes
-
+import adminRouter from './routes/admin/admin.routes';
+import cookieParser from 'cookie-parser';
 dotenv.config();
 
 console.log('Loaded env vars:', {
@@ -25,16 +26,18 @@ const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:2701
 const corsOptions = {
   origin: 'http://localhost:3000', // <-- IMPORTANT: Change to your Next.js URL
   credentials: true, // <-- IMPORTANT: Allow sending cookies (for refreshToken)
+   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions))
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
+app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactUsRoutes);
-
+app.use('/api/admin', adminRouter);
 
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 

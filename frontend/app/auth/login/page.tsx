@@ -5,63 +5,44 @@ import type React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { loginUser } from "../../../service/authApi"; // Assuming this path is correct
-import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/AuthContext"; // Ensure this path is correct
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  
+  // Get everything we need from the AuthContext!
+  const { login, error: authError, isLoading: isAuthLoading } = useAuth();
+
+  // Local state to manage form-specific submission loading
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (!email || !password) {
-      setError("Email and password are required");
-      return;
-    }
+    setIsSubmitting(true);
 
     try {
-      setIsLoading(true);
-      // Assuming loginUser returns { message: string, user: { role: string, ... } }
-      const responseData = await loginUser({ email, password });
+      // Call the login function from the context
+      await login({ email, password });
+      
+      // The context will handle success and redirection automatically.
+      // No need to do anything here!
 
-      // Check if user data and role exist in the response
-      if (responseData && responseData.user && responseData.user.role) {
-        localStorage.setItem("userRole", responseData.user.role);
-        console.log("Login successful, user role stored:", responseData.user.role);
-        router.push("/admin"); // Redirect to admin page
-      } else {
-        setError("Login successful, but user role not found in response.");
-        console.error("Login successful, but user role not found:", responseData);
-        // Optionally redirect to a default page if role is missing but login was "successful"
-        router.push("/");
-      }
-    } catch (err: any) {
-      let errorMessage = "Failed to login. Please check your credentials.";
-      if (err.response && err.response.data && err.response.data.message) {
-        errorMessage = err.response.data.message;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (typeof err === 'string' && err.trim() !== "") {
-        errorMessage = err;
-      }
-      setError(errorMessage);
-      console.error("Login error:", err);
+    } catch (err) {
+      // The context now handles the error message, but we catch it here
+      // to know that the submission failed and stop the loading indicator.
+      console.log("Login submission failed in component.");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
-      {/* Image section - improved responsiveness */}
+      {/* Image section (no changes) */}
       <div className="relative h-40 w-full sm:h-56 md:h-64 lg:h-auto lg:w-2/5">
         <Image
-          src="/auth/login.png" // Ensure this image is in public/auth/login.png
+          src="/auth/login.png"
           alt="Login background"
           fill
           className="object-cover"
@@ -73,21 +54,19 @@ export default function LoginForm() {
       {/* Login Form section */}
       <div className="flex w-full items-center justify-center bg-white px-4 py-8 sm:px-6 sm:py-12 md:px-8 md:py-16 lg:w-3/5 lg:px-12 lg:py-20">
         <div className="w-full max-w-sm space-y-8 sm:max-w-md lg:max-w-lg">
-          {/* Login Heading */}
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-[0.2em] text-gray-900 sm:text-3xl lg:text-4xl">LOGIN</h1>
           </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="rounded-md bg-red-50 p-4" role="alert"> {/* Added role="alert" */}
-              <p className="text-sm text-red-700">{error}</p>
+          {/* Display the error from the AuthContext */}
+          {authError && (
+            <div className="rounded-md bg-red-50 p-4" role="alert">
+              <p className="text-sm text-red-700">{authError}</p>
             </div>
           )}
 
-          {/* Login Form */}
           <form className="space-y-8 sm:space-y-10" onSubmit={handleSubmit}>
-            {/* Email Field */}
+            {/* Email Field (no changes) */}
             <div className="space-y-3">
               <label
                 htmlFor="email"
@@ -109,7 +88,7 @@ export default function LoginForm() {
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password Field (no changes) */}
             <div className="space-y-3">
               <label
                 htmlFor="password"
@@ -135,15 +114,15 @@ export default function LoginForm() {
             <div className="pt-6 sm:pt-8">
               <button
                 type="submit"
-                disabled={isLoading}
-                aria-busy={isLoading} // Added aria-busy
+                disabled={isSubmitting} // Use local form submission state
+                aria-busy={isSubmitting}
                 className="w-full rounded-md bg-[#6F4E37] px-6 py-3 text-sm font-semibold uppercase tracking-[0.1em] text-white transition-all duration-200 hover:bg-[#5d4230] focus:outline-none focus:ring-2 focus:ring-[#6F4E37] focus:ring-offset-2 sm:py-4 sm:text-base disabled:opacity-70"
               >
-                {isLoading ? "LOGGING IN..." : "LOGIN"}
+                {isSubmitting ? "LOGGING IN..." : "LOGIN"}
               </button>
             </div>
 
-            {/* Links */}
+            {/* Links (no changes) */}
             <div className="space-y-6 pt-4 text-center sm:pt-6">
               <Link
                 href="/auth/forgot-password"

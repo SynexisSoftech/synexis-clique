@@ -3,7 +3,8 @@ import { Request, Response, NextFunction } from 'express';
 
 // Stronger password validation regex:
 // At least 8 characters, one uppercase, one lowercase, one number, one special character
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+// const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[A-Za-z\d\S]{8,}$/;
 
 export const signupValidationRules = (): ValidationChain[] => [
   body('username')

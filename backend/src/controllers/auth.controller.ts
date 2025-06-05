@@ -6,6 +6,7 @@ import { OtpPurpose } from '../models/OtpVerification';
 import * as OtpService from '../services/otp.service';
 import * as TokenService from '../services/token.service'; // Assumes TokenService generates accessToken and refreshToken
 import { uploadImageToCloudinary } from '../services/cloudinary.service'; // For handling image uploads
+import { AuthRequest } from '../middleware/auth.middleware';
 
 // --- Configuration Constants ---
 // Number of salt rounds for hashing user passwords. Higher is more secure, but slower.
@@ -429,4 +430,110 @@ export const resendForgotPasswordOtp = async (req: Request, res: Response): Prom
     console.error('Resend Forgot Password OTP Error:', err);
     res.status(500).json({ message: `Failed to resend password reset OTP: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
+};
+
+// --- Get User Details Controller ---
+/**
+ * Retrieves details for the authenticated user.
+ * Uses AuthRequest to access user details populated by the 'protect' middleware.
+ */
+export const getUserDetails = async (req: AuthRequest, res: Response): Promise<void> => {
+    // req.user is populated by the 'protect' middleware and contains the authenticated user's data (excluding password)
+    if (!req.user) {
+        // This check is more of a safeguard; 'protect' middleware should handle unauthenticated access.
+        res.status(401).json({ message: 'Unauthorized: User data not available.' });
+        return;
+    }
+
+    try {
+        // The req.user object is already populated by the protect middleware
+        // with user details (excluding password, passwordResetOTP, etc., as per the .select in 'protect').
+        const user = req.user; // User details are directly available
+
+        // Optional: You might want to explicitly check isVerified status here if it's critical
+        // and not already handled by a global check in `protect` or if specific routes need stricter verification.
+        if (!user.isVerified) {
+            console.warn(`[Get User Details] Attempt to access unverified user: ${user.email}`);
+            res.status(403).json({ message: 'User account is not verified.' });
+            return;
+        }
+        
+        console.log(`[Get User Details] Successfully retrieved details for user: ${user.email}`);
+        res.status(200).json({
+            message: 'User details retrieved successfully.',
+            user: {
+                id: user._id.toString(), // Ensure ID is sent as string
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                photoURL: user.photoURL,
+                isVerified: user.isVerified,
+                createdAt: user.createdAt, // Optionally include timestamps
+                updatedAt: user.updatedAt
+            }
+        });
+    } catch (err: any) {
+        // This catch block would handle unexpected errors within this controller logic,
+        // though most user fetching errors would be caught by the 'protect' middleware.
+        console.error('Get User Details Error:', err);
+        res.status(500).json({ message: `Failed to retrieve user details: ${err.message || 'An unexpected error occurred.'}` });
+    }
+};
+
+// --- Refresh Token Controller ---
+/**
+ * Handles refresh token requests to issue a new access token.
+ */
+export const refreshTokenHandler = async (req: Request, res: Response): Promise<void> => {
+    const incomingRefreshToken = req.cookies.refreshToken;
+
+    if (!incomingRefreshToken) {
+        console.warn('[Refresh Token] No refresh token provided in cookie.');
+        res.status(401).json({ message: 'Access denied. No refresh token provided.' });
+        return;
+    }
+
+    try {
+        const decoded = TokenService.verifyRefreshToken(incomingRefreshToken); // This service method should handle JWT verification
+        if (!decoded || !decoded.userId) {
+            console.warn('[Refresh Token] Invalid or expired refresh token.');
+            // Clear the potentially invalid refresh token cookie
+            res.cookie('refreshToken', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', expires: new Date(0) });
+            res.status(403).json({ message: 'Invalid or expired refresh token. Please log in again.' });
+            return;
+        }
+
+        const user = await UserModel.findById(decoded.userId);
+        if (!user || !user.isVerified) { // Also check if user is verified
+            console.warn(`[Refresh Token] User not found or not verified for ID: ${decoded.userId}`);
+            res.cookie('refreshToken', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', expires: new Date(0) });
+            res.status(403).json({ message: 'User not found, not verified, or refresh token revoked. Please log in again.' });
+            return;
+        }
+
+        // Generate new pair of tokens
+        const { accessToken, refreshToken: newRefreshToken } = TokenService.generateTokens(user._id.toString());
+        console.log(`[Refresh Token] New access token generated for user: ${user.email}`);
+
+        // Set the new refresh token in HttpOnly cookie
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+        
+        res.status(200).json({
+            message: 'Access token refreshed successfully.',
+            accessToken
+        });
+
+    } catch (err: any) {
+        console.error('Refresh Token Error:', err);
+        // Clear cookie on specific JWT errors too
+        if (err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError' || err.message?.includes('Invalid') || err.message?.includes('expired')) {
+            res.cookie('refreshToken', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', expires: new Date(0) });
+        }
+        res.status(500).json({ message: `Failed to refresh token: ${err.message || 'An unexpected error occurred.'}` });
+    }
 };

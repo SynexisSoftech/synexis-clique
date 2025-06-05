@@ -1,6 +1,5 @@
-"use client"
-
-import type React from "react"
+// app/dashboard/categories/edit/[id]/page.tsx
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -12,93 +11,164 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Upload, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-
-interface Category {
-  id: string
-  title: string
-  description: string
-  seoKeywords: string
-  tags: string
-  status: string
-  image?: string
-}
+// Import your service and types
+import { categoriesService, Category, UpdateCategoryData } from "../../../../../service/categoryApi"
+import AdminRouteGuard from "@/app/AdminRouteGuard";
 
 export default function EditCategoryPage() {
   const router = useRouter()
   const params = useParams()
+  const categoryId = params.id as string // Get ID from URL
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null) // State for error messages
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Category>({
-    id: "",
+  const [formData, setFormData] = useState<Partial<Category>>({ // Use Partial<Category> for initial state
+    // _id will be from the fetched category, not part of form data directly
     title: "",
     description: "",
     seoKeywords: "",
     tags: "",
     status: "active",
+    image: undefined, // Initialize as undefined or null
   })
 
+  // State to track if image was changed (new upload) or removed (null)
+  const [imageFile, setImageFile] = useState<File | null>(null); // To store the actual file if newly uploaded
+  const [imageRemoved, setImageRemoved] = useState<boolean>(false); // To explicitly indicate image removal
+
   useEffect(() => {
-    if (params.id) {
-      fetchCategory(params.id as string)
+    if (categoryId) {
+      fetchCategory(categoryId)
     }
-  }, [params.id])
+  }, [categoryId]) // Depend on categoryId
 
   const fetchCategory = async (id: string) => {
+    setIsLoading(true)
+    setError(null)
     try {
-      const response = await fetch(`/api/categories/${id}`)
-      if (response.ok) {
-        const category = await response.json()
-        setFormData(category)
-        if (category.image) {
-          setImagePreview(category.image)
-        }
+      const category = await categoriesService.getCategoryById(id)
+      // Map fetched data to form data, using _id as id
+      setFormData({
+        _id: category._id, // Keep the original _id
+        title: category.title,
+        description: category.description,
+        seoKeywords: category.seoKeywords || "",
+        tags: category.tags || "",
+        status: category.status,
+        image: category.image || undefined, // Set existing image URL
+      })
+      if (category.image) {
+        setImagePreview(category.image) // Set preview to existing image
       }
-    } catch (error) {
-      console.error("Error fetching category:", error)
+    } catch (err: any) {
+      console.error("Error fetching category:", err)
+      setError(err.message || "Failed to fetch category details.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setImageFile(file); // Store the actual file
+      setImageRemoved(false); // Reset image removed flag
       const reader = new FileReader()
       reader.onload = () => setImagePreview(reader.result as string)
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(file) // Read as data URL for preview
     }
   }
 
   const removeImage = () => {
-    setImagePreview(null)
+    setImagePreview(null) // Clear preview
+    setImageFile(null); // Clear any newly selected file
+    setImageRemoved(true); // Mark for removal
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
+
+    if (!formData._id) {
+        setError("Category ID is missing for update.");
+        setIsLoading(false);
+        return;
+    }
 
     try {
-      const submitData = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        submitData.append(key, value)
-      })
+      let imageBase64: string | null | undefined = undefined; // Default: no change
 
-      const response = await fetch(`/api/categories/${params.id}`, {
-        method: "PUT",
-        body: submitData,
-      })
-
-      if (response.ok) {
-        router.push("/dashboard/categories")
-      } else {
-        console.error("Failed to update category")
+      if (imageRemoved) {
+        imageBase64 = null; // Explicitly send null to remove image
+      } else if (imageFile) {
+        // If a new file is selected, convert it to base64
+        const reader = new FileReader();
+        const fileToBase64Promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        imageBase64 = await fileToBase64Promise;
       }
-    } catch (error) {
-      console.error("Error updating category:", error)
+      // If imageFile is null and not removed, imageBase64 remains undefined, meaning no change to image
+
+      const updateData: UpdateCategoryData = {
+        id: formData._id, // Use the actual _id for the service call
+        title: formData.title || "",
+        description: formData.description || "",
+        seoKeywords: formData.seoKeywords,
+        tags: formData.tags,
+        status: formData.status,
+        image: imageBase64, // Pass the base64 string or null/undefined
+      }
+
+      await categoriesService.updateCategory(updateData)
+      router.push("/admin/categories")
+    } catch (err: any) {
+      console.error("Error updating category:", err)
+      setError(err.message || "Failed to update category.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading category details...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-center h-64 text-red-500">
+          <p className="text-lg">Error: {error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle case where categoryId is not available (e.g., direct access without ID)
+  if (!categoryId) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-center h-64 text-red-500">
+          <p className="text-lg">Category ID is missing.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <AdminRouteGuard>
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <Button variant="outline" size="icon" asChild className="w-fit">
@@ -127,7 +197,7 @@ export default function EditCategoryPage() {
                 <Input
                   id="title"
                   placeholder="Enter category title"
-                  value={formData.title}
+                  value={formData.title || ""} // Ensure value is a string
                   onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                   required
                   className="w-full"
@@ -142,7 +212,7 @@ export default function EditCategoryPage() {
                   id="description"
                   placeholder="Enter category description"
                   className="min-h-[80px] sm:min-h-[100px] w-full resize-none"
-                  value={formData.description}
+                  value={formData.description || ""} // Ensure value is a string
                   onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   required
                 />
@@ -153,8 +223,8 @@ export default function EditCategoryPage() {
                   Status
                 </Label>
                 <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+                  value={formData.status || "active"} // Default to active if undefined
+                  onValueChange={(value: "active" | "inactive") => setFormData((prev) => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select status" />
@@ -174,7 +244,7 @@ export default function EditCategoryPage() {
                   <Input
                     id="seoKeywords"
                     placeholder="keyword1, keyword2"
-                    value={formData.seoKeywords}
+                    value={formData.seoKeywords || ""} // Ensure value is a string
                     onChange={(e) => setFormData((prev) => ({ ...prev, seoKeywords: e.target.value }))}
                     className="w-full"
                   />
@@ -187,7 +257,7 @@ export default function EditCategoryPage() {
                   <Input
                     id="tags"
                     placeholder="tag1, tag2"
-                    value={formData.tags}
+                    value={formData.tags || ""} // Ensure value is a string
                     onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
                     className="w-full"
                   />
@@ -253,5 +323,6 @@ export default function EditCategoryPage() {
         </div>
       </form>
     </div>
+    </AdminRouteGuard>
   )
 }

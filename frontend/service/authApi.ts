@@ -1,3 +1,4 @@
+import { Console } from "console";
 import axiosInstance from "../utils/axiosInstance";
 
 
@@ -24,6 +25,7 @@ export const verifySignupOtp = async (verificationData: any) => {
 export const resendSignupOtp = async (data: { email: string }) => {
   try {
     const response = await axiosInstance.post('/api/auth/resend-signup-otp', data);
+    console.log(response.data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
@@ -35,6 +37,7 @@ export const resendSignupOtp = async (data: { email: string }) => {
 export const loginUser = async (credentials: any) => {
   try {
     const response = await axiosInstance.post('/api/auth/login', credentials);
+    console.log(response.data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
