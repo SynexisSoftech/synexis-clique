@@ -7,6 +7,7 @@ import { Cormorant_Garamond } from "next/font/google"
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
   variable: "--font-cormorant",
 })
 

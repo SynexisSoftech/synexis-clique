@@ -1,6 +1,7 @@
 "use client"
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { ChevronRight } from "lucide-react"
 
 const faqData = [
   {
@@ -47,39 +48,47 @@ const faqData = [
 
 export default function FAQ() {
   return (
-    <section className="w-full py-12 md:py-16 lg:py-20 bg-gray-50">
+    <section className="w-full py-12 md:py-16 lg:py-24 bg-amber-50/50">
       <div className="container px-4 md:px-6 mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium italic tracking-tight mb-4 text-[#6F4E37] font-cormorant">
             Frequently Asked Questions
           </h2>
-          <p className="mx-auto max-w-[700px] text-gray-600 md:text-xl">
+          <div className="w-24 h-1 bg-[#6F4E37]/30 mx-auto mb-6"></div>
+          <p className="mx-auto max-w-[700px] text-gray-700 md:text-xl font-cormorant italic">
             Find answers to common questions about our products and services.
           </p>
         </div>
 
         <div className="mx-auto max-w-3xl">
-          <Accordion type="single" collapsible className="w-full space-y-4">
+          <Accordion type="single" collapsible className="w-full space-y-5">
             {faqData.map((faq, index) => (
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-white rounded-lg border border-gray-200 px-6"
+                className="bg-white rounded-lg border border-[#6F4E37]/20 shadow-sm overflow-hidden"
               >
-                <AccordionTrigger className="text-left font-semibold text-gray-900 hover:no-underline py-6">
-                  {faq.question}
+                <AccordionTrigger className="text-left font-medium italic text-[#6F4E37] hover:no-underline py-6 px-6 font-cormorant text-lg md:text-xl group">
+                  <div className="flex items-center">
+                    <div className="mr-4 h-8 w-8 rounded-full bg-[#6F4E37]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#6F4E37]/20 transition-colors">
+                      <ChevronRight className="h-4 w-4 text-[#6F4E37] transition-transform group-data-[state=open]:rotate-90" />
+                    </div>
+                    {faq.question}
+                  </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-gray-600 pb-6 leading-relaxed">{faq.answer}</AccordionContent>
+                <AccordionContent className="text-gray-700 pb-6 px-6 pl-[4.5rem] font-cormorant text-lg leading-relaxed">
+                  {faq.answer}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
 
-          <div className="mt-12 text-center bg-white rounded-lg p-8 border border-gray-200">
-            <h3 className="text-xl font-semibold mb-3">Still have questions?</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="mt-16 text-center bg-white rounded-lg p-8 border border-[#6F4E37]/20 shadow-md">
+            <h3 className="text-2xl font-medium italic mb-3 text-[#6F4E37] font-cormorant">Still have questions?</h3>
+            <p className="text-gray-700 mb-8 font-cormorant text-lg">
               If you can't find the answer you're looking for, feel free to contact our support team.
             </p>
-            <button className="bg-black text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors">
+            <button className="bg-[#6F4E37] text-white px-8 py-3 rounded-md font-cormorant font-medium italic text-lg hover:bg-[#5d4230] transition-colors">
               Contact Support
             </button>
           </div>
