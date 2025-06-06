@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Menu } from "lucide-react"
 import Image from "next/image"
 
@@ -15,8 +16,10 @@ import CartIcon from "../cart-icons/cart"
 import ProfileDropdown from "../profile-dropdown/profile-dropdown"
 
 export default function Navbar() {
+  const router = useRouter()
   const [cartCount] = useState(3)
   const [wishlistCount] = useState(5)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const navigationLinks = [
     { name: "SHOP", href: "/shop" },
@@ -40,6 +43,18 @@ export default function Navbar() {
     // Handle cart navigation
   }
 
+  const handleSignInClick = () => {
+    // For demo purposes, we'll toggle the login state
+    // In a real app, this would redirect to the sign-in page
+    router.push("/auth/login")
+
+    // This is just for demonstration - in a real app you wouldn't set isLoggedIn here
+    // but after actual authentication
+    setTimeout(() => {
+      setIsLoggedIn(true)
+    }, 500)
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-md border-b border-gray-200/50 shadow-lg shadow-purple-500/5">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6">
@@ -61,7 +76,7 @@ export default function Navbar() {
               <SheetContent side="left" className="w-80 bg-gradient-to-b from-white to-purple-50/30">
                 <div className="flex flex-col space-y-6 mt-8">
                   <div className="text-center">
-                    <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-cormorant">
                       MENU
                     </div>
                   </div>
@@ -73,9 +88,9 @@ export default function Navbar() {
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-lg opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
                       <Image
                         src="/logo/logo.png"
-                        className="relative h-12 sm:h-14 lg:h-16 object-contain filter group-hover:brightness-110 transition-all duration-300"
-                        width={120}
-                        height={60}
+                        className="relative h-16 sm:h-18 lg:h-20 object-contain filter group-hover:brightness-110 transition-all duration-300"
+                        width={160}
+                        height={80}
                         alt="Logo"
                       />
                     </div>
@@ -84,7 +99,7 @@ export default function Navbar() {
                     <Link
                       key={link.name}
                       href={link.href}
-                      className="relative text-lg font-semibold text-gray-700 hover:text-gray-900 transition-colors duration-300 p-4 rounded-xl group"
+                      className="relative text-lg font-semibold text-gray-700 hover:text-gray-900 transition-colors duration-300 p-4 rounded-xl group font-cormorant"
                     >
                       {link.name}
                       <span className="absolute bottom-2 left-4 w-0 h-0.5 bg-[#6F4E37] transition-all duration-300 group-hover:w-[calc(100%-2rem)]"></span>
@@ -103,9 +118,9 @@ export default function Navbar() {
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-lg opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
                 <Image
                   src="/logo/logo.png"
-                  className="relative h-10 sm:h-12 lg:h-14 xl:h-16 object-contain filter group-hover:brightness-110 transition-all duration-300"
-                  width={64}
-                  height={64}
+                  className="relative h-14 sm:h-16 lg:h-18 xl:h-20 object-contain filter group-hover:brightness-110 transition-all duration-300"
+                  width={140}
+                  height={80}
                   alt="Logo"
                 />
               </div>
@@ -117,7 +132,7 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="relative text-xs lg:text-sm xl:text-base font-bold tracking-wide text-gray-700 hover:text-gray-900 transition-colors duration-300 px-3 py-2 group"
+                  className="relative text-sm lg:text-base xl:text-lg font-bold tracking-wide text-gray-700 hover:text-gray-900 transition-colors duration-300 px-3 py-2 group font-cormorant"
                 >
                   {link.name}
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#6F4E37] transition-all duration-300 group-hover:w-full"></span>
@@ -137,8 +152,17 @@ export default function Navbar() {
             {/* Cart Icon */}
             <CartIcon count={cartCount} onClick={handleCartClick} />
 
-            {/* Profile Dropdown */}
-            <ProfileDropdown />
+            {/* Sign In Button or Profile Dropdown */}
+            {isLoggedIn ? (
+              <ProfileDropdown />
+            ) : (
+              <Button
+                onClick={handleSignInClick}
+                className="bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant text-base"
+              >
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </div>
