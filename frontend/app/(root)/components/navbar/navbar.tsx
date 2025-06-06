@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 // Import the separate components
 import SearchComponent from "../search-bar/search-bar"
 import WishlistIcon from "../wishlist/wishlist"
-import CartIcon from "../cart-icons/cart"
+import CartDropdown from "./cart-dropdown"
 import ProfileDropdown from "../profile-dropdown/profile-dropdown"
 
 export default function Navbar() {
@@ -22,9 +22,9 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const navigationLinks = [
-    { name: "SHOP", href: "/shop" },
+    { name: "PRODUCTS", href: "/products" },
     { name: "NEW ARRIVALS", href: "/new-arrivals" },
-    { name: "SALE", href: "/sale" },
+    { name: "CATEGORIES", href: "/categories" },
     { name: "ABOUT", href: "/about" },
   ]
 
@@ -40,7 +40,7 @@ export default function Navbar() {
 
   const handleCartClick = () => {
     console.log("Cart clicked")
-    // Handle cart navigation
+    // Handle cart navigation - this will be handled by the dropdown
   }
 
   const handleSignInClick = () => {
@@ -149,8 +149,8 @@ export default function Navbar() {
             {/* Wishlist Icon */}
             <WishlistIcon count={wishlistCount} onClick={handleWishlistClick} />
 
-            {/* Cart Icon */}
-            <CartIcon count={cartCount} onClick={handleCartClick} />
+            {/* Cart Dropdown */}
+            <CartDropdown count={cartCount} onClick={handleCartClick} />
 
             {/* Sign In Button or Profile Dropdown */}
             {isLoggedIn ? (
