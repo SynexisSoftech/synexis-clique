@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import AdminRouteGuard from "../AdminRouteGuard"
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,7 @@ export default function DashboardLayout({
   children: ReactNode
 }) {
   return (
+    <AdminRouteGuard>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
@@ -38,5 +40,6 @@ export default function DashboardLayout({
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+    </AdminRouteGuard>
   )
 }

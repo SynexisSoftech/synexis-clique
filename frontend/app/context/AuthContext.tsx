@@ -210,6 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setError(null);
             } else {
               console.warn("[AuthContext] '/api/auth/me' returned no valid user data.");
+              setIsAuthenticated(false);
               clearAuthAndLogout();
             }
           } catch (userFetchError: any) {
@@ -289,8 +290,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Logout API call failed", e);
     }
     clearAuthAndLogout(); // Clear all auth state on logout
-    router.push('/login');
+    router.push('/auth/login');
   };
+  useEffect(() => {
+    const handleAuthFailure = () => {
+        console.warn('[AuthContext] Auth failure detected globally. Logging out.');
+        logout(); // Or call a more direct state-clearing function
+    };
+
+    window.addEventListener('auth-failure', handleAuthFailure);
+
+    return () => {
+        window.removeEventListener('auth-failure', handleAuthFailure);
+    };
+}, [logout])
 
   const value = { user, login, logout, isLoading, error, isAuthenticated };
 
