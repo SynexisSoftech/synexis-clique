@@ -7,7 +7,7 @@ import { ArrowRight, Users, Baby, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-export default function CategoryShowcase() {
+export default function CategoryCom() {
   const categories = [
     {
       id: "women",
