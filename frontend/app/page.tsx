@@ -6,6 +6,7 @@ import FAQ from "./(root)/components/faq/faq-section"
 import Footer from "./(root)/components/footer/footer"
 import ButtonTop from "./(root)/components/bottom-to-top/buttonTop"
 import { CategoryShowcase } from "./(root)/components/category-showcase/showcase"
+import GenderCategories from "./(root)/components/category-homepage/gender-showcase"
 
 export default function HomePage() {
   return (
@@ -14,6 +15,8 @@ export default function HomePage() {
  <Navbar />
  <Hero />
  <CategoryShowcase />
+   <GenderCategories />
+<CategoryShowcase />
  <FAQ />
  <Footer />
  <ButtonTop />
