@@ -137,7 +137,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import apiClient, { updateApiToken, clearApiToken } from '../../utils/axiosInstance';
 import axios from 'axios';
 
@@ -164,7 +164,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
+const PUBLIC_PATHS = ['/auth/login', '/auth/register'];
 let inMemoryToken: string | null = null;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -173,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
-
+ const pathname = usePathname();
   // Helper function to consolidate clearing auth state
   const clearAuthAndLogout = () => {
     inMemoryToken = null;
@@ -186,6 +186,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const attemptSilentLogin = async () => {
+        if (PUBLIC_PATHS.includes(pathname)) {
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true); // Start loading
 
       try {
@@ -239,7 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     attemptSilentLogin();
-  }, []);
+  }, [pathname]);
 
   // --- RE-INSERTED LOGIN FUNCTION HERE ---
   const login = async (credentials: LoginCredentials) => {
