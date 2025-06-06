@@ -2,6 +2,7 @@
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ChevronRight } from "lucide-react"
+import { useRouter } from "next/navigation";
 
 const faqData = [
   {
@@ -47,6 +48,11 @@ const faqData = [
 ]
 
 export default function FAQ() {
+    const router = useRouter();
+
+    const contactClick = () =>{
+        router.push('/contact')
+    }
   return (
     <section className="w-full py-12 md:py-16 lg:py-24 bg-amber-50/50">
       <div className="container px-4 md:px-6 mx-auto">
@@ -88,7 +94,7 @@ export default function FAQ() {
             <p className="text-gray-700 mb-8 font-cormorant text-lg">
               If you can't find the answer you're looking for, feel free to contact our support team.
             </p>
-            <button className="bg-[#6F4E37] text-white px-8 py-3 rounded-md font-cormorant font-medium italic text-lg hover:bg-[#5d4230] transition-colors">
+            <button  onClick={contactClick}className="bg-[#6F4E37] text-white px-8 py-3 rounded-md font-cormorant font-medium italic text-lg hover:bg-[#5d4230] transition-colors">
               Contact Support
             </button>
           </div>

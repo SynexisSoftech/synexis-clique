@@ -46,7 +46,7 @@ export default function Navbar() {
   const handleSignInClick = () => {
     // For demo purposes, we'll toggle the login state
     // In a real app, this would redirect to the sign-in page
-    router.push("/auth/signin")
+    router.push("/auth/login")
 
     // This is just for demonstration - in a real app you wouldn't set isLoggedIn here
     // but after actual authentication
