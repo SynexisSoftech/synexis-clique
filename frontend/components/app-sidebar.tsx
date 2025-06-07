@@ -107,6 +107,12 @@ const data = {
       icon: MessageSquare,
       isActive: false,
     },
+     {
+      title: "Social-Media",
+      url: "/admin/social-media",
+      icon: MessageSquare,
+      isActive: false,
+    },
     {
       title: "Settings",
       url: "/admin/settings",
