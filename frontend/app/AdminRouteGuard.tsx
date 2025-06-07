@@ -187,12 +187,22 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
   //      for an unauthorized user while the `useEffect` is preparing to redirect.
   //    - The component only renders the `children` if all conditions are explicitly met.
   if (isLoading || !isAuthenticated || user?.role !== 'admin') {
-    return <div>
-      <div>Verifying access, please wait...</div>
-<Link href="/auth/login">Go to Login</Link>
-   
-      </div>; // Or return a more sophisticated loading spinner component.
-  }
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-100">
+      <div className="text-center">
+        <div className="flex justify-center mb-4">
+          <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-gray-700">Verifying access, please wait...</h2>
+        <p className="text-sm text-gray-500 mt-2">Redirecting to the login page if not authorized.</p>
+      </div>
+    </div>
+  );
+}
+
 
 
   // 4. If all checks pass, the user is a verified admin. Render the protected content.

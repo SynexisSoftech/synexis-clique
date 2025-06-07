@@ -66,11 +66,9 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
   e.preventDefault();
   setIsLoading(true);
 
-  // --- FIX IS HERE ---
-  // If imagePreview exists, split it at the comma and take the second part (the actual base64 data).
-  // Otherwise, set it to undefined.
-  const base64ImageContent = imagePreview ? imagePreview.split(',')[1] : undefined;
-  // --- END OF FIX ---
+  // The imagePreview state already contains the full base64 data URI.
+  // The Cloudinary backend service expects this full string to process the upload.
+  // There is no need to split the string; doing so removes essential metadata.
 
   // Convert comma-separated strings to arrays of strings
   const seoKeywordsArray = formData.seoKeywords
@@ -86,8 +84,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
       description: formData.description,
       seoKeywords: seoKeywordsArray.length > 0 ? seoKeywordsArray : undefined,
       tags: tagsArray.length > 0 ? tagsArray : undefined,
-      // Use the corrected variable here
-      image: base64ImageContent,
+      // Pass the entire data URI from imagePreview directly.
+      image: imagePreview ? imagePreview : undefined,
     });
 
     toast({
@@ -107,7 +105,6 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
     setIsLoading(false);
   }
 };
-
   const handleInputChange =
     (field: keyof Omit<ICategoryFormData, "image">) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {

@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import AdminRouteGuard from "@/app/AdminRouteGuard";
-import { categoriesService, UpdateCategoryPayload, getValidationErrors } from "../../../../../service/categoryApi"; 
+import { categoriesService, UpdateCategoryPayload, getValidationErrors } from "../../../../../service/categoryApi";
 import Image from "next/image";
 
 interface ICategoryEditForm {
@@ -41,8 +41,9 @@ export default function EditCategoryPage() {
   });
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isImageDirty, setIsImageDirty] = useState<boolean>(false);
-
+  const [isImageDirty, setIsImageDirty] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+ const fileInputRef = React.useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!categoryId) return;
     const fetchCategoryData = async () => {
@@ -55,9 +56,17 @@ export default function EditCategoryPage() {
           seoKeywords: category.seoKeywords?.join(", ") || "",
           tags: category.tags?.join(", ") || "",
         });
-        setImagePreview(category.image || null);
+        
+        if (category.image) {
+          setImagePreview(category.image);
+          setCurrentImageUrl(category.image); // Store the original URL
+        }
       } catch (err) {
-        toast({ title: "Error", description: "Failed to fetch category data.", variant: "destructive" });
+        toast({ 
+          title: "Error", 
+          description: "Failed to fetch category data.", 
+          variant: "destructive" 
+        });
         router.push("/admin/categories");
       } finally {
         setIsFetching(false);
@@ -66,14 +75,42 @@ export default function EditCategoryPage() {
     fetchCategoryData();
   }, [categoryId, router, toast]);
 
+
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      if (!file.type.match('image.*')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload an image file (JPEG, PNG, etc.)",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate file size (e.g., 5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsImageDirty(true);
       const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result as string);
+      reader.onload = () => {
+        setImagePreview(reader.result as string);
+      };
       reader.readAsDataURL(file);
     }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const removeImage = () => {
@@ -102,17 +139,17 @@ export default function EditCategoryPage() {
       tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
     };
 
+    // Image handling - send full base64 if changed
     if (isImageDirty) {
-      if (imagePreview) {
-        payload.image = imagePreview.split(',')[1];
-      } else {
-        payload.image = null;
-      }
+      payload.image = imagePreview || null; // Send full data URI or null if removed
     }
 
     try {
       await categoriesService.updateCategory(categoryId, payload);
-      toast({ title: "Success!", description: "Category has been updated." });
+      toast({ 
+        title: "Success!", 
+        description: "Category has been updated." 
+      });
       router.push("/admin/categories");
     } catch (error: any) {
       const errorMessage = getValidationErrors(error);
@@ -127,7 +164,9 @@ export default function EditCategoryPage() {
   };
 
   if (isFetching) {
-    return <p>Loading category...</p>;
+    return <div className="flex justify-center items-center h-screen">
+      <p>Loading category...</p>
+    </div>;
   }
 
   return (
@@ -151,16 +190,32 @@ export default function EditCategoryPage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title *</Label>
-                  <Input id="title" value={formData.title} onChange={handleInputChange} required />
+                  <Input 
+                    id="title" 
+                    value={formData.title} 
+                    onChange={handleInputChange} 
+                    required 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea id="description" value={formData.description} onChange={handleInputChange} required />
+                  <Textarea 
+                    id="description" 
+                    value={formData.description} 
+                    onChange={handleInputChange} 
+                    required 
+                    className="min-h-[120px]"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={handleStatusChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select 
+                    value={formData.status} 
+                    onValueChange={handleStatusChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
@@ -169,64 +224,95 @@ export default function EditCategoryPage() {
                 </div>
                 <div>
                   <Label htmlFor="seoKeywords">SEO Keywords (comma-separated)</Label>
-                  <Input id="seoKeywords" value={formData.seoKeywords} onChange={handleInputChange} />
+                  <Input 
+                    id="seoKeywords" 
+                    value={formData.seoKeywords} 
+                    onChange={handleInputChange} 
+                    placeholder="keyword1, keyword2, keyword3"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="tags">Tags (comma-separated)</Label>
-                  <Input id="tags" value={formData.tags} onChange={handleInputChange} />
+                  <Input 
+                    id="tags" 
+                    value={formData.tags} 
+                    onChange={handleInputChange} 
+                    placeholder="tag1, tag2, tag3"
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+          <Card>
               <CardHeader>
                 <CardTitle>Category Image</CardTitle>
+                <CardDescription>
+                  {currentImageUrl && !isImageDirty 
+                    ? "Current image" 
+                    : "Upload a new image"}
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 {imagePreview ? (
-                  <div className="relative">
+                  <div className="relative group">
                     <Image
                       src={imagePreview}
                       alt="Category preview"
-                      width={400}
-                      height={200}
-                      className="w-full h-48 object-cover rounded-lg"
+                      width={600}
+                      height={400}
+                      className="w-full h-64 object-contain rounded-lg border"
                     />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={removeImage}>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={removeImage}
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="h-8 w-8 mb-2" />
-                        <p className="mb-2 text-sm">Click to upload</p>
-                        <p className="text-xs">PNG, JPG (MAX. 800x400px)</p>
-                      </div>
-                      <input
-                        id="dropzone-file"
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                      />
-                    </label>
+                  <div 
+                    className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer"
+                    onClick={triggerFileInput}
+                  >
+                    <Upload className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium mb-2">Click to upload</p>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG up to 5MB
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          <div className="flex space-x-4">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Updating..." : "Save Changes"}
-            </Button>
+          <div className="flex justify-end gap-4">
             <Button variant="outline" asChild>
-              <Link href="/admin/categories">Cancel</Link>
+              <Link href="/admin/categories">
+                Cancel
+              </Link>
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </div>
         </form>

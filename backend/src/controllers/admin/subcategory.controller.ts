@@ -3,6 +3,7 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Subcategory, ISubcategory } from '../../models/subCategory.model'; // Adjust path
 import { Category } from '../../models/category.model'; // Adjust path
 import mongoose from 'mongoose';
+import { uploadImageToCloudinary } from '../../services/cloudinary.service'; // Assuming cloudinary service path
 
 /**
  * @desc    Create a new subcategory
@@ -34,13 +35,25 @@ export const createSubcategory = async (req: AuthRequest, res: Response, next: N
             return;
         }
 
+        let imageUrl: string | undefined;
+        if (image) {
+            try {
+                // Upload image to Cloudinary
+                imageUrl = await uploadImageToCloudinary(image, 'subcategories');
+            } catch (uploadError: any) {
+                console.error('[Admin Subcategory Controller] Cloudinary Upload Error:', uploadError.message);
+                res.status(500).json({ message: 'Server error while uploading image' });
+                return;
+            }
+        }
+
         const subcategory = new Subcategory({
             title,
             description,
             categoryId,
             seoKeywords,
             tags,
-            image, // Assuming image is a URL string
+            image: imageUrl, // Save the Cloudinary URL
             status: status || 'active',
             createdBy: req.user._id,
         });
@@ -76,7 +89,6 @@ export const getAllSubcategories = async (req: AuthRequest, res: Response, next:
         if (statusFilter && ['active', 'inactive'].includes(statusFilter)) {
             query.status = statusFilter;
         }
-
 
         const count = await Subcategory.countDocuments(query);
         const subcategories = await Subcategory.find(query)
@@ -157,7 +169,6 @@ export const updateSubcategory = async (req: AuthRequest, res: Response, next: N
             subcategory.categoryId = categoryId;
         }
 
-        // Check for uniqueness if title or categoryId is changed
         const newTitle = title || subcategory.title;
         const newCategoryId = categoryId || subcategory.categoryId.toString();
 
@@ -169,12 +180,25 @@ export const updateSubcategory = async (req: AuthRequest, res: Response, next: N
             }
         }
 
+        // Check if a new base64 image is provided for update
+        if (image && image.startsWith('data:image')) {
+            try {
+                const newImageUrl = await uploadImageToCloudinary(image, 'subcategories');
+                subcategory.image = newImageUrl;
+            } catch (uploadError: any) {
+                console.error('[Admin Subcategory Controller] Cloudinary Update Error:', uploadError.message);
+                res.status(500).json({ message: 'Server error while updating image' });
+                return;
+            }
+        } else if (image !== undefined) {
+             // This allows for clearing the image or setting it to a different URL string
+            subcategory.image = image;
+        }
 
         subcategory.title = title || subcategory.title;
         subcategory.description = description || subcategory.description;
         subcategory.seoKeywords = seoKeywords !== undefined ? seoKeywords : subcategory.seoKeywords;
         subcategory.tags = tags !== undefined ? tags : subcategory.tags;
-        subcategory.image = image !== undefined ? image : subcategory.image;
         subcategory.status = status || subcategory.status;
 
         const updatedSubcategory = await subcategory.save();

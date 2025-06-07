@@ -71,7 +71,7 @@ export default function CategoriesPage() {
             <p className="text-muted-foreground">Manage your product categories.</p>
           </div>
           <Button asChild>
-            <Link href="/admin/categories/add">
+            <Link href="/admin/addcategory">
               <Plus className="mr-2 h-4 w-4" />
               Add Category
             </Link>

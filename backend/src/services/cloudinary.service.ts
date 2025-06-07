@@ -12,7 +12,8 @@ cloudinary.config({
 
 export const uploadImageToCloudinary = async (base64Image: string, folder: string = 'user_photos'): Promise<string> => {
   try {
-    const result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${base64Image}`, {
+ 
+      const result = await cloudinary.uploader.upload(base64Image, {
       folder: folder,
       // transformation: [{ width: 500, height: 500, crop: 'limit' }] // Example transformation
     });
