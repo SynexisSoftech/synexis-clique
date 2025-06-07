@@ -10,6 +10,7 @@ import contactUsRoutes from './routes/contactus.routes';
 import adminRouter from './routes/admin/admin.routes';
 import publicCategoryRoutes from './routes/public/publicCategory.routes';
 import publicSubcategoryRoutes from './routes/public/subcategory.public.routes';
+import publicProductRoutes from './routes/public/publicproduct.routes';
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use('/api/contact', contactUsRoutes);
 app.use('/api/admin', adminRouter);
 app.use('/api/public', publicCategoryRoutes);
 app.use('/api/public/subcategories', publicSubcategoryRoutes);
+app.use('/api/public/products', publicProductRoutes);
 
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 
