@@ -3,18 +3,18 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronRight, Loader2 } from "lucide-react"
+import { ChevronRight, Loader2, ShoppingBag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { categoriesService, type Category } from "../../../service/categoryApi"
+import type { Category } from "../../../service/categoryApi"
 import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
+import publicCategoryService, { PublicCategory } from "@/service/public/categoryPublicService"
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([])
+    const [categories, setCategories] = useState<PublicCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,13 +22,9 @@ export default function CategoriesPage() {
     const fetchCategories = async () => {
       try {
         setLoading(true)
-        const response = await categoriesService.getCategories({
-          status: "active",
-          limit: 50,
-          sortBy: "title",
-          sortOrder: "asc",
-        })
-        setCategories(response.categories)
+        const fetchedCategories = await publicCategoryService.getAllPublicCategories()
+        setCategories(fetchedCategories)
+        console.log(fetchedCategories)
       } catch (err: any) {
         setError(err.message || "Failed to fetch categories")
       } finally {
@@ -41,107 +37,132 @@ export default function CategoriesPage() {
 
   if (loading) {
     return (
-      <div className="container px-4 py-8 md:px-6 md:py-12">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading categories...</span>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-16 md:px-6 md:py-24">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-rose-200 rounded-full animate-pulse" />
+                <Loader2 className="h-8 w-8 text-rose-600 animate-spin absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold text-slate-900">Loading Categories</h2>
+                <p className="text-slate-600">Please wait while we fetch the latest categories...</p>
+              </div>
+            </div>
           </div>
         </div>
+        <Footer />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="container px-4 py-8 md:px-6 md:py-12">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <Navbar />
+        <div className="container mx-auto px-4 py-16 md:px-6 md:py-24">
+          <div className="max-w-md mx-auto">
+            <Alert variant="destructive" className="border-red-200 bg-red-50">
+              <AlertDescription className="text-red-800">
+                <strong>Error:</strong> {error}
+              </AlertDescription>
+            </Alert>
+            <div className="mt-6 text-center">
+              <Button asChild className="bg-rose-600 hover:bg-rose-700">
+                <Link href="/">Return Home</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
       </div>
     )
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Navbar />
-  
-    <div className="container px-4 py-8 md:px-6 md:py-12">
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/" className="text-slate-500 hover:text-slate-700">
-          Home
-        </Link>
-        <ChevronRight className="h-4 w-4 text-slate-400" />
-        <span className="font-medium text-slate-900">Categories</span>
-      </div>
 
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Shop by Category</h1>
-        <p className="text-slate-600 md:text-lg">Discover our wide range of product categories</p>
-      </div>
+      <div className="container mx-auto px-4 py-8 md:px-6 md:py-12">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 mb-8" aria-label="Breadcrumb">
+          <Link href="/" className="text-slate-500 hover:text-rose-600 transition-colors duration-200 font-medium">
+            Home
+          </Link>
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+          <span className="font-semibold text-slate-900">Categories</span>
+        </nav>
 
-      {categories.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-slate-600 mb-4">No categories available at the moment.</p>
-          <Button asChild className="bg-rose-600 hover:bg-rose-700">
-            <Link href="/">Go Home</Link>
-          </Button>
+        {/* Page Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-800 px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <ShoppingBag className="h-4 w-4" />
+            Shop by Category
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            Discover Our Collections
+          </h1>
+          <p className="text-slate-600 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Explore our carefully curated categories and find exactly what you're looking for
+          </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {categories.map((category) => (
-            <Card
-              key={category._id}
-              className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer"
-            >
-              <Link href={`/categories/${category.title.toLowerCase().replace(/\s+/g, "-")}`}>
-                <CardHeader className="p-0 relative">
-                  <div className="overflow-hidden bg-gradient-to-br from-rose-100 to-pink-50">
-                    <Image
-                      src={category.image || "/placeholder.svg?height=300&width=400"}
-                      alt={category.title}
-                      width={400}
-                      height={300}
-                      className="object-cover w-full aspect-[4/3] transition-transform group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <Badge variant="secondary" className="mb-2 bg-white/90 text-slate-700 hover:bg-white">
-                      {category.status}
-                    </Badge>
-                    <h3 className="font-bold text-xl text-white group-hover:text-rose-200 transition-colors">
-                      {category.title}
-                    </h3>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <p className="text-sm text-slate-600 line-clamp-2">{category.description}</p>
-                  {category.seoKeywords && typeof category.seoKeywords === "string" && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {category.seoKeywords
-                        .split(",")
-                        .slice(0, 3)
-                        .map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="text-xs border-rose-200 text-rose-600">
-                            {keyword.trim()}
-                          </Badge>
-                        ))}
+
+        {/* Categories Grid or Empty State */}
+        {categories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center mb-6">
+              <ShoppingBag className="h-12 w-12 text-slate-400" />
+            </div>
+            <h2 className="text-2xl font-semibold text-slate-900 mb-2">No Categories Available</h2>
+            <p className="text-slate-600 mb-8 max-w-md">
+              We're working on adding new categories. Check back soon for exciting new collections!
+            </p>
+            <Button asChild className="bg-rose-600 hover:bg-rose-700 px-8 py-3 text-lg">
+              <Link href="/">Explore Homepage</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {categories.map((category) => (
+              <Card
+                key={category._id}
+                className="overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-500 group cursor-pointer bg-white/80 backdrop-blur-sm hover:bg-white"
+              >
+                <Link href={`/categories/${category.slug}`} className="block">
+                  <CardHeader className="p-0 relative">
+                    <div className="overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
+                      <Image
+                        src={category.image || "/placeholder.svg?height=300&width=400"}
+                        alt={category.title}
+                        width={400}
+                        height={300}
+                        className="object-cover w-full aspect-[4/3] transition-all duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
                     </div>
-                  )}
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>Created: {new Date(category.createdAt).toLocaleDateString()}</span>
-                    {category.createdBy && <span>By: {category.createdBy.username}</span>}
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-
-<Footer />
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <h3 className="font-bold text-xl text-white group-hover:text-rose-200 transition-colors duration-300 drop-shadow-lg">
+                        {category.title}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <p className="text-slate-600 line-clamp-2 leading-relaxed">{category.description}</p>
+                    <div className="mt-4 flex items-center text-rose-600 font-medium text-sm group-hover:text-rose-700 transition-colors">
+                      Explore Collection
+                      <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+
+      <Footer />
+    </div>
   )
 }

@@ -63,47 +63,50 @@ export default function AddCategoryPage() {
  // AddCategoryPage.tsx (inside the component)
 
 const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-  e.preventDefault()
-  setIsLoading(true)
+  e.preventDefault();
+  setIsLoading(true);
 
-  const imageToSend = imagePreview
+  // --- FIX IS HERE ---
+  // If imagePreview exists, split it at the comma and take the second part (the actual base64 data).
+  // Otherwise, set it to undefined.
+  const base64ImageContent = imagePreview ? imagePreview.split(',')[1] : undefined;
+  // --- END OF FIX ---
 
   // Convert comma-separated strings to arrays of strings
-  // Trim each item to remove leading/trailing whitespace
   const seoKeywordsArray = formData.seoKeywords
     ? formData.seoKeywords.split(',').map(kw => kw.trim())
-    : []
+    : [];
   const tagsArray = formData.tags
     ? formData.tags.split(',').map(tag => tag.trim())
-    : []
+    : [];
 
   try {
     await categoriesService.createCategory({
       title: formData.title,
       description: formData.description,
-      // Send the arrays, or undefined if they are empty
       seoKeywords: seoKeywordsArray.length > 0 ? seoKeywordsArray : undefined,
       tags: tagsArray.length > 0 ? tagsArray : undefined,
-      image: imageToSend || undefined,
-    })
+      // Use the corrected variable here
+      image: base64ImageContent,
+    });
 
     toast({
       title: "Success",
       description: "Category created successfully",
-    })
+    });
 
-    router.push("/admin/categories")
+    router.push("/admin/categories");
   } catch (error) {
-    console.error("Error creating category:", error)
+    console.error("Error creating category:", error);
     toast({
       title: "Error",
       description: error instanceof Error ? error.message : "Failed to create category",
       variant: "destructive",
-    })
+    });
   } finally {
-    setIsLoading(false)
+    setIsLoading(false);
   }
-}
+};
 
   const handleInputChange =
     (field: keyof Omit<ICategoryFormData, "image">) =>

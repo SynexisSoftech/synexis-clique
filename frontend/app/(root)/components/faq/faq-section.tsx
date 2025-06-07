@@ -134,7 +134,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg"
                 alt="Fashion clothing collection"
-                className="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#6f4e37]/20 to-transparent rounded-2xl"></div>
             </div>
@@ -142,7 +142,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg"
                 alt="Designer clothing rack"
-                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-amber-600/20 to-transparent rounded-2xl"></div>
             </div>
@@ -150,7 +150,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg"
                 alt="Fashion accessories"
-                className="w-full h-36 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-36 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent rounded-2xl"></div>
             </div>
@@ -164,28 +164,28 @@ export default function FAQ() {
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.08 }}
+                  transition={{ duration: 0.1, delay: 0 }}
                 >
                   <AccordionItem
                     value={`item-${index}`}
-                    className="bg-white/70 backdrop-blur-sm rounded-xl border border-[#6f4e37]/10 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group hover:border-[#6f4e37]/20"
+                    className="bg-white/70 backdrop-blur-sm rounded-xl border border-[#6f4e37]/10 shadow-sm hover:shadow-md transition-all duration-100 overflow-hidden group hover:border-[#6f4e37]/20"
                   >
-                    <AccordionTrigger className="text-left font-semibold text-[#6f4e37] hover:no-underline py-5 px-6 group-hover:bg-gradient-to-r group-hover:from-amber-50/50 group-hover:to-orange-50/30 transition-all duration-150 ease-out">
+                    <AccordionTrigger className="text-left font-semibold text-[#6f4e37] hover:no-underline py-5 px-6 group-hover:bg-gradient-to-r group-hover:from-amber-50/50 group-hover:to-orange-50/30 transition-all duration-50 ease-out">
                       <div className="flex items-center w-full">
                         <div
-                          className={`mr-4 h-8 w-8 rounded-lg bg-gradient-to-br ${faq.bgColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all duration-300`}
+                          className={`mr-4 h-8 w-8 rounded-lg bg-gradient-to-br ${faq.bgColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all duration-75`}
                         >
                           <faq.icon className={`h-4 w-4 ${faq.iconColor}`} />
                         </div>
                         <span className="flex-1 pr-4 text-base md:text-lg">{faq.question}</span>
-                        <ChevronRight className="h-4 w-4 text-[#6f4e37] transition-transform duration-150 ease-out group-data-[state=open]:rotate-90 flex-shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-[#6f4e37] transition-transform duration-50 ease-out group-data-[state=open]:rotate-90 flex-shrink-0" />
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="overflow-hidden transition-all duration-200 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-up-1 data-[state=open]:slide-down-1">
+                    <AccordionContent className="overflow-hidden transition-all duration-75 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-up-1 data-[state=open]:slide-down-1">
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        transition={{ duration: 0.05, ease: "easeOut" }}
                         className="text-gray-600 pb-5 px-6 pl-14 leading-relaxed"
                       >
                         <div className="border-l-2 border-[#6f4e37]/20 pl-4 bg-gradient-to-r from-amber-50/30 to-transparent p-3 rounded-r-lg">
@@ -210,7 +210,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg"
                 alt="Stylish fashion model"
-                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#6f4e37]/20 to-transparent rounded-2xl"></div>
             </div>
@@ -218,7 +218,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg"
                 alt="Fashion boutique interior"
-                className="w-full h-44 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-44 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-amber-600/20 to-transparent rounded-2xl"></div>
             </div>
@@ -226,7 +226,7 @@ export default function FAQ() {
               <img
                 src="https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg"
                 alt="Shopping bags and accessories"
-                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105"
+                className="w-full h-40 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-100 transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent rounded-2xl"></div>
             </div>

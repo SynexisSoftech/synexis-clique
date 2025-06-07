@@ -189,11 +189,17 @@ export interface CreateCategoryData {
   image?: string // Changed from File to string (to send base64 data URI)
   status?: "active" | "inactive"
 }
-
+export interface CreateCategoryPayload {
+  title: string
+  description: string
+  seoKeywords?: string[] // CORRECTED
+  tags?: string[]        // CORRECTED
+  image?: string         // Base64 string
+  status?: "active" | "inactive"
+}
 // For Update, image can be a new base64 string or undefined/null if not changing/removing
-export interface UpdateCategoryData extends Partial<Omit<CreateCategoryData, "image">> {
-  id: string // The ID of the category to update
-  image?: string | null // string for new base64, null to remove, undefined to not change
+export type UpdateCategoryPayload = Partial<Omit<CreateCategoryPayload, 'image'>> & {
+    image?: string | null; // string (base64) | null (remove) | undefined (no change)
 }
 
 export interface CategoriesResponse {
@@ -261,19 +267,21 @@ class CategoriesService {
     }
   }
 
-  async updateCategory(data: UpdateCategoryData): Promise<Category> {
+ async updateCategory(id: string, payload: UpdateCategoryPayload): Promise<Category> {
     try {
-      const { id, ...updateData } = data
-      const response = await apiClient.put(`${this.baseUrl}/${id}`, updateData, {
+      // The id is used directly in the URL, and payload is the body. Clean and simple.
+      const response = await apiClient.put(`${this.baseUrl}/${id}`, payload, {
         headers: {
           "Content-Type": "application/json",
         },
-      })
-      return response.data
+      });
+      return response.data;
     } catch (error: any) {
-      console.error(`Error updating category ${data.id}:`, error)
-      const message = error.response?.data?.message || "Failed to update category"
-      throw new Error(message)
+      // Error handling is still robust
+      console.error(`Error updating category ${id}:`, error);
+      // You can re-use your getValidationErrors helper here if needed
+      const message = error.response?.data?.message || "Failed to update category";
+      throw new Error(message);
     }
   }
 
@@ -314,5 +322,13 @@ class CategoriesService {
   }
 }
 
+export const getValidationErrors = (error: any): string => {
+    if (error.response?.data?.errors) {
+        return Object.values(error.response.data.errors)
+            .map((err: any) => err.message)
+            .join('\n'); // Join with newlines for toast display
+    }
+    return error.response?.data?.message || "An unexpected error occurred.";
+}
 // Export a singleton instance
 export const categoriesService = new CategoriesService()
