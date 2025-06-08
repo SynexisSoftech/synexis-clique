@@ -13,6 +13,8 @@ import publicSubcategoryRoutes from './routes/public/subcategory.public.routes';
 import publicProductRoutes from './routes/public/publicproduct.routes';
 import socialLinkAdminRoutes from './routes/admin/socialLink.routes';
 import publicSocialLinksRoutes from './routes/public/publicsociallinks.route';
+import adminHeroRoutes from './routes/admin/adminHero.routes'; // Adjust path as needed
+import publicHeroRoutes from './routes/public/hero.routes'; 
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -48,6 +50,11 @@ app.use('/api/public/subcategories', publicSubcategoryRoutes);
 app.use('/api/public/products', publicProductRoutes);
 app.use('/api/admin/social-links', socialLinkAdminRoutes);
 app.use('/api/social-links', publicSocialLinksRoutes);
+app.use('/api/admin/hero-slides', adminHeroRoutes);
+
+// For Public data fetching (e.g., /api/hero-slides)
+app.use('/api/hero-slides', publicHeroRoutes);
+
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 
 app.get('/', (req: Request, res: Response) => {

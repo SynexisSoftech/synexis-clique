@@ -95,11 +95,19 @@ const data = {
         },
       ],
     },
+    
     {
       title: "Users",
       url: "/admin/users",
       icon: Users,
       isActive: false,
+    },
+
+    {
+title:"add homepage image",
+url:"admin/hero",
+icon:Users,
+isActive:false,
     },
     {
       title: "Contacts",
