@@ -59,7 +59,7 @@ export default function EditHeroSlidePage() {
           description: "Failed to fetch slide data",
           variant: "destructive",
         })
-        router.push("/admin/hero-slides")
+        router.push("/admin/hero")
       } finally {
         setIsLoading(false)
       }
@@ -141,7 +141,7 @@ export default function EditHeroSlidePage() {
         description: "Hero slide updated successfully",
       })
       
-      router.push("/admin/hero-slides")
+      router.push("/admin/hero")
     } catch (error: any) {
       console.error("Error updating hero slide:", error)
       toast({

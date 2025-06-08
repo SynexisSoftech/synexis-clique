@@ -90,7 +90,7 @@ export default function HeroSlidesPage() {
               <h1 className="text-3xl font-bold text-gray-900">Hero Slides</h1>
               <p className="text-gray-600 mt-2">Manage your website's hero section slides</p>
             </div>
-            <Link href="/admin/hero-slides/add">
+            <Link href="/admin/add-hero">
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 Add New Slide
