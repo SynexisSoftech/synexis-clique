@@ -109,6 +109,12 @@ url:"admin/hero",
 icon:Users,
 isActive:false,
     },
+     {
+title:"contact info",
+url:"admin/contact-info",
+icon:Users,
+isActive:false,
+    },
     {
       title: "Contacts",
       url: "/admin/contacts",

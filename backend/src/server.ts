@@ -14,7 +14,8 @@ import publicProductRoutes from './routes/public/publicproduct.routes';
 import socialLinkAdminRoutes from './routes/admin/socialLink.routes';
 import publicSocialLinksRoutes from './routes/public/publicsociallinks.route';
 import adminHeroRoutes from './routes/admin/adminHero.routes'; // Adjust path as needed
-import publicHeroRoutes from './routes/public/hero.routes'; 
+import publicHeroRoutes from './routes/public/hero.routes';
+import contactInfoAdminRoutes from './routes/admin/contactinfo.routes'; 
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/public/products', publicProductRoutes);
 app.use('/api/admin/social-links', socialLinkAdminRoutes);
 app.use('/api/social-links', publicSocialLinksRoutes);
 app.use('/api/admin/hero-slides', adminHeroRoutes);
+app.use('/api/admin/contact-info', contactInfoAdminRoutes);
 
 // For Public data fetching (e.g., /api/hero-slides)
 app.use('/api/hero-slides', publicHeroRoutes);
