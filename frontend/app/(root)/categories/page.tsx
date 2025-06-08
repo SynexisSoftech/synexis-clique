@@ -8,23 +8,42 @@ import { ChevronRight, Loader2, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { Category } from "../../../service/categoryApi"
 import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
-import publicCategoryService, { PublicCategory } from "@/service/public/categoryPublicService"
+import publicCategoryService, { type PublicCategory } from "@/service/public/categoryPublicService"
+import publicSubcategoryService, { type PublicSubcategory } from "@/service/public/publicSubcategoryService"
+
+interface CategoryWithSubcategories extends PublicCategory {
+  subcategories?: PublicSubcategory[]
+}
 
 export default function CategoriesPage() {
-    const [categories, setCategories] = useState<PublicCategory[]>([])
+  const [categories, setCategories] = useState<CategoryWithSubcategories[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesWithSubcategories = async () => {
       try {
         setLoading(true)
         const fetchedCategories = await publicCategoryService.getAllPublicCategories()
-        setCategories(fetchedCategories)
-        console.log(fetchedCategories)
+
+        // Fetch subcategories for each category
+        const categoriesWithSubcategories = await Promise.all(
+          fetchedCategories.map(async (category) => {
+            try {
+              const subcategories = await publicSubcategoryService.getPublicSubcategories({
+                categorySlug: category.slug,
+              })
+              return { ...category, subcategories }
+            } catch (err) {
+              console.warn(`Failed to fetch subcategories for ${category.title}:`, err)
+              return { ...category, subcategories: [] }
+            }
+          }),
+        )
+
+        setCategories(categoriesWithSubcategories)
       } catch (err: any) {
         setError(err.message || "Failed to fetch categories")
       } finally {
@@ -32,7 +51,7 @@ export default function CategoriesPage() {
       }
     }
 
-    fetchCategories()
+    fetchCategoriesWithSubcategories()
   }, [])
 
   if (loading) {
@@ -146,11 +165,33 @@ export default function CategoriesPage() {
                       <h3 className="font-bold text-xl text-white group-hover:text-rose-200 transition-colors duration-300 drop-shadow-lg">
                         {category.title}
                       </h3>
+                      {category.subcategories && category.subcategories.length > 0 && (
+                        <p className="text-white/80 text-sm mt-1 drop-shadow">
+                          {category.subcategories.length} subcategories
+                        </p>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <p className="text-slate-600 line-clamp-2 leading-relaxed">{category.description}</p>
-                    <div className="mt-4 flex items-center text-rose-600 font-medium text-sm group-hover:text-rose-700 transition-colors">
+                    <p className="text-slate-600 line-clamp-2 leading-relaxed mb-3">{category.description}</p>
+
+                    {/* Show subcategories preview */}
+                    {category.subcategories && category.subcategories.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex flex-wrap gap-1">
+                          {category.subcategories.slice(0, 3).map((sub) => (
+                            <span key={sub._id} className="text-xs bg-rose-50 text-rose-600 px-2 py-1 rounded">
+                              {sub.title}
+                            </span>
+                          ))}
+                          {category.subcategories.length > 3 && (
+                            <span className="text-xs text-slate-500">+{category.subcategories.length - 3} more</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center text-rose-600 font-medium text-sm group-hover:text-rose-700 transition-colors">
                       Explore Collection
                       <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                     </div>

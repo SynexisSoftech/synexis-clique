@@ -1,47 +1,79 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronRight, Filter, SlidersHorizontal, Grid3X3, List, Loader2, ServerCrash } from "lucide-react"
+import { ChevronRight, Grid3X3, List, Loader2, ServerCrash, ShoppingBag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Navbar from "../../components/navbar/navbar"
 import Footer from "../../components/footer/footer"
-import publicCategoryService, { PublicCategory } from "@/service/public/categoryPublicService"
+import publicCategoryService, { type PublicCategory } from "@/service/public/categoryPublicService"
+import publicSubcategoryService, { type PublicSubcategory } from "@/service/public/publicSubcategoryService"
+import ProductService, { type ProductDetails } from "@/service/public/Productservice"
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  // Unwrap the params Promise
+  const resolvedParams = use(params)
+
   const [viewMode, setViewMode] = useState("grid")
-  const [priceRange, setPriceRange] = useState([1000, 15000])
   const [sortOption, setSortOption] = useState("featured")
-  const [filters, setFilters] = useState({
-    colors: [],
-    sizes: [],
-    brands: [],
-    styles: [],
-  })
   const [category, setCategory] = useState<PublicCategory | null>(null)
+  const [subcategories, setSubcategories] = useState<PublicSubcategory[]>([])
+  const [products, setProducts] = useState<ProductDetails[]>([])
   const [loading, setLoading] = useState(true)
+  const [productsLoading, setProductsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!params.slug) return
+  // Helper function to calculate final price
+  const getFinalPrice = (product: ProductDetails) => {
+    return product.discountPrice || product.originalPrice || 0
+  }
 
-    const fetchCategoryDetails = async () => {
+  // Helper function to calculate discount percentage
+  const getDiscountPercentage = (product: ProductDetails) => {
+    if (product.discountPrice && product.originalPrice) {
+      return Math.round(((product.originalPrice - product.discountPrice) / product.originalPrice) * 100)
+    }
+    return 0
+  }
+
+  useEffect(() => {
+    if (!resolvedParams.slug) return
+
+    const fetchCategoryData = async () => {
       try {
         setLoading(true)
-        const fetchedCategory = await publicCategoryService.getPublicCategoryBySlug(params.slug)
+
+        // Fetch category details
+        const fetchedCategory = await publicCategoryService.getPublicCategoryBySlug(resolvedParams.slug)
         setCategory(fetchedCategory)
+
+        // Fetch subcategories for this category
+        const fetchedSubcategories = await publicSubcategoryService.getPublicSubcategories({
+          categorySlug: resolvedParams.slug,
+        })
+        setSubcategories(fetchedSubcategories)
+
+        // Fetch products for this category
+        setProductsLoading(true)
+        try {
+          const productsResponse = await ProductService.getProductsByCategory(fetchedCategory._id, {
+            limit: 12,
+            sort: sortOption as any,
+          })
+          setProducts(productsResponse.products)
+        } catch (productError) {
+          console.warn("Failed to fetch products:", productError)
+          setProducts([])
+        } finally {
+          setProductsLoading(false)
+        }
       } catch (err: any) {
         setError(err.message || "Failed to load category details.")
       } finally {
@@ -49,13 +81,16 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
       }
     }
 
-    fetchCategoryDetails()
-  }, [params.slug])
+    fetchCategoryData()
+  }, [resolvedParams.slug, sortOption])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex items-center gap-2 text-lg">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading Category...</span>
+        </div>
       </div>
     )
   }
@@ -77,78 +112,18 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
     )
   }
 
-  const handleFilterChange = (type: string, value: string) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev }
-      if (newFilters[type].includes(value)) {
-        newFilters[type] = newFilters[type].filter((item) => item !== value)
-      } else {
-        newFilters[type] = [...newFilters[type], value]
-      }
-      return newFilters
-    })
-  }
-
-  const clearFilters = () => {
-    setFilters({
-      colors: [],
-      sizes: [],
-      brands: [],
-      styles: [],
-    })
-    setPriceRange([1000, 15000])
-  }
-
-  const FilterSidebar = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold mb-4 flex items-center text-slate-900">
-          <Filter className="h-4 w-4 mr-2 text-rose-500" />
-          Filters
-        </h3>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mb-4 border-rose-300 text-rose-600 hover:bg-rose-50"
-          onClick={clearFilters}
-        >
-          Clear Filters
-        </Button>
-      </div>
-      <Accordion type="single" collapsible defaultValue="price">
-        <AccordionItem value="price" className="border-slate-200">
-          <AccordionTrigger className="text-slate-900 hover:text-rose-600">Price Range</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4">
-              <Slider
-                defaultValue={priceRange}
-                min={1000}
-                max={15000}
-                step={500}
-                value={priceRange}
-                onValueChange={setPriceRange}
-                className="mt-2"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">NPR {priceRange[0].toLocaleString()}</span>
-                <span className="text-sm text-slate-600">NPR {priceRange[1].toLocaleString()}</span>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        {/* Other filter sections would go here */}
-      </Accordion>
-    </div>
-  )
-
   return (
     <div>
       <Navbar />
       <div className="container px-4 py-8 md:px-6 md:py-12">
         <div className="flex items-center gap-2 mb-6">
-          <Link href="/" className="text-slate-500 hover:text-slate-700">Home</Link>
+          <Link href="/" className="text-slate-500 hover:text-slate-700">
+            Home
+          </Link>
           <ChevronRight className="h-4 w-4 text-slate-400" />
-          <Link href="/categories" className="text-slate-500 hover:text-slate-700">Categories</Link>
+          <Link href="/categories" className="text-slate-500 hover:text-slate-700">
+            Categories
+          </Link>
           <ChevronRight className="h-4 w-4 text-slate-400" />
           <span className="font-medium text-slate-900">{category.title}</span>
         </div>
@@ -156,7 +131,7 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
         <div className="relative mb-8">
           <div className="relative h-[200px] md:h-[300px] overflow-hidden rounded-lg">
             <Image
-              src={category.image || "/placeholder.svg"}
+              src={category.image || "/placeholder.svg?height=300&width=800"}
               alt={category.title}
               fill
               className="object-cover"
@@ -169,23 +144,149 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
               <div className="max-w-lg">
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{category.title}</h1>
                 <p className="text-white/80 md:text-lg">{category.description}</p>
+                {category.tags && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {category.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="bg-white/20 text-white border-white/30">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Placeholder for products */}
-        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-          <h2 className="text-2xl font-semibold text-slate-800">Products Coming Soon!</h2>
-          <p className="text-slate-500 mt-2">The products for the '{category.title}' category will be displayed here.</p>
-          {category.tags && (
-            <div className="mt-4 flex flex-wrap gap-2 justify-center">
-              {category.tags.map(tag => (
-                <Badge key={tag} variant="outline">{tag}</Badge>
+
+        {/* Subcategories Section */}
+        {subcategories.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Browse Subcategories</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {subcategories.map((subcategory) => (
+                <Card key={subcategory._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                  <Link href={`/categories/${category.slug}/${subcategory.slug}`}>
+                    <CardHeader className="p-0">
+                      <div className="relative h-32 overflow-hidden">
+                        <Image
+                          src={subcategory.image || "/placeholder.svg?height=128&width=200"}
+                          alt={subcategory.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <h3 className="font-semibold text-white text-sm">{subcategory.title}</h3>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-3">
+                      <p className="text-slate-600 text-sm line-clamp-2">{subcategory.description}</p>
+                    </CardContent>
+                  </Link>
+                </Card>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Products Section */}
+        {/* <div className="mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-bold text-slate-900">Products</h2>
+              {!productsLoading && <span className="text-slate-500">({products.length} items)</span>}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="featured">Featured</SelectItem>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Tabs value={viewMode} onValueChange={setViewMode}>
+                <TabsList>
+                  <TabsTrigger value="grid">
+                    <Grid3X3 className="h-4 w-4" />
+                  </TabsTrigger>
+                  <TabsTrigger value="list">
+                    <List className="h-4 w-4" />
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
+          {productsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Loading products...</span>
+              </div>
+            </div>
+          ) : products.length > 0 ? (
+            <div
+              className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"}`}
+            >
+              {products.map((product) => {
+                const finalPrice = getFinalPrice(product)
+                const discountPercentage = getDiscountPercentage(product)
+
+                return (
+                  <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                    <Link href={`/products/${product._id}`}>
+                      <CardHeader className="p-0">
+                        <div className="relative aspect-square overflow-hidden">
+                          <Image
+                            src={product.images?.[0] || "/placeholder.svg?height=300&width=300"}
+                            alt={product.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          {discountPercentage > 0 && (
+                            <Badge className="absolute top-2 left-2 bg-red-500">{discountPercentage}% OFF</Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-slate-900 line-clamp-2 mb-2">{product.title}</h3>
+                        <p className="text-slate-600 text-sm line-clamp-2 mb-3">{product.shortDescription}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-lg text-slate-900">NPR {finalPrice.toLocaleString()}</span>
+                          {product.discountPrice && product.originalPrice && (
+                            <span className="text-slate-500 line-through text-sm">
+                              NPR {product.originalPrice.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        {product.brand && <p className="text-slate-500 text-sm mt-1">{product.brand}</p>}
+                      </CardContent>
+                    </Link>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <ShoppingBag className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">No Products Found</h3>
+              <p className="text-slate-500 mb-4">
+                No products are currently available in the '{category.title}' category.
+              </p>
+              {subcategories.length > 0 && (
+                <p className="text-slate-500">Try browsing our subcategories above to find what you're looking for.</p>
+              )}
+            </div>
           )}
-        </div>
+        </div> */}
       </div>
       <Footer />
     </div>

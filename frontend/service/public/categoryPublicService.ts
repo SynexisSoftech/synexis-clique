@@ -1,6 +1,7 @@
 // A shared interface for the public category data.
 
 import apiClient from "@/utils/axiosInstance";
+import axios from "axios";
 
 // Based on the `.select()` fields in your controller.
 export interface PublicCategory {
