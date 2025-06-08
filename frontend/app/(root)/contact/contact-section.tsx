@@ -1,8 +1,20 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Facebook, Instagram, Twitter, Linkedin } from "lucide-react"
+import { useState, useEffect } from "react"
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  CheckCircle,
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import Footer from "../components/footer/footer"
 import Navbar from "../components/navbar/navbar"
+import { getPublicContactInfo, type PublicContactInfo } from "../../../service/public/publicContactInfoService"
 
 const queryTypes = [
   { value: "GENERAL_QUERY", label: "General Query" },
@@ -24,13 +37,55 @@ const queryTypes = [
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    queryType: "GENERAL_QUERY",
-    description: "I have a question about your services",
+    name: "",
+    email: "",
+    queryType: "",
+    description: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [contactInfo, setContactInfo] = useState<PublicContactInfo | null>(null)
+  const [isLoadingContactInfo, setIsLoadingContactInfo] = useState(true)
+  const [contactInfoError, setContactInfoError] = useState<string | null>(null)
+
+  // Fetch contact information on component mount
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        setIsLoadingContactInfo(true)
+        setContactInfoError(null)
+        const data = await getPublicContactInfo()
+        setContactInfo(data)
+      } catch (error) {
+        console.error("Failed to fetch contact info:", error)
+        setContactInfoError("Failed to load contact information")
+        // Set fallback data
+        setContactInfo({
+          phoneNumbers: [
+            { label: "Main", number: "+1 (555) 123-4567" },
+            { label: "Support", number: "+1 (555) 987-6543" },
+          ],
+          emails: [
+            { label: "Support", email: "support@fashionstore.com" },
+            { label: "General", email: "hello@fashionstore.com" },
+          ],
+          locations: [
+            {
+              label: "Main Office",
+              addressLine1: "123 Fashion Street",
+              city: "New York",
+              state: "NY",
+              postalCode: "10001",
+            },
+          ],
+        })
+      } finally {
+        setIsLoadingContactInfo(false)
+      }
+    }
+
+    fetchContactInfo()
+  }, [])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -59,9 +114,18 @@ export default function ContactPage() {
     }, 3000)
   }
 
+  const formatAddress = (location: any) => {
+    const parts = [
+      location.addressLine1,
+      location.addressLine2,
+      `${location.city}, ${location.state} ${location.postalCode}`,
+    ].filter(Boolean)
+    return parts
+  }
+
   return (
     <>
-    <Navbar />
+      <Navbar />
       <div className="min-h-screen bg-white">
         {/* Hero Section with Single Image */}
         <section className="relative h-[40vh] md:h-[50vh] overflow-hidden">
@@ -203,49 +267,104 @@ export default function ContactPage() {
                     <p className="text-white/80 mt-1">Reach out to us directly</p>
                   </div>
                   <CardContent className="p-6 space-y-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-5 w-5 text-[#6F4E37]" />
+                    {isLoadingContactInfo ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-[#6F4E37]" />
+                        <span className="ml-2 text-gray-600">Loading contact information...</span>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-1">Email</h3>
-                        <p className="text-gray-600">support@fashionstore.com</p>
-                        <p className="text-gray-600">hello@fashionstore.com</p>
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        {contactInfoError && (
+                          <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+                            {contactInfoError} - Showing fallback information
+                          </div>
+                        )}
 
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-5 w-5 text-[#6F4E37]" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-1">Phone</h3>
-                        <p className="text-gray-600">+1 (555) 123-4567</p>
-                        <p className="text-gray-600">+1 (555) 987-6543</p>
-                      </div>
-                    </div>
+                        {/* Email Section */}
+                        {contactInfo?.emails && contactInfo.emails.length > 0 && (
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Mail className="h-5 w-5 text-[#6F4E37]" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-gray-900 mb-1">Email</h3>
+                              {contactInfo.emails.map((email, index) => (
+                                <p key={index} className="text-gray-600">
+                                  {email.email}
+                                  {email.label && email.label !== "General" && (
+                                    <span className="text-xs text-gray-500 ml-1">({email.label})</span>
+                                  )}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <MapPin className="h-5 w-5 text-[#6F4E37]" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-1">Address</h3>
-                        <p className="text-gray-600">123 Fashion Street</p>
-                        <p className="text-gray-600">New York, NY 10001</p>
-                      </div>
-                    </div>
+                        {/* Phone Section */}
+                        {contactInfo?.phoneNumbers && contactInfo.phoneNumbers.length > 0 && (
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Phone className="h-5 w-5 text-[#6F4E37]" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-gray-900 mb-1">Phone</h3>
+                              {contactInfo.phoneNumbers.map((phone, index) => (
+                                <p key={index} className="text-gray-600">
+                                  {phone.number}
+                                  {phone.label && <span className="text-xs text-gray-500 ml-1">({phone.label})</span>}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 text-[#6F4E37]" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-1">Hours</h3>
-                        <p className="text-gray-600">Mon - Fri: 9:00 AM - 6:00 PM</p>
-                        <p className="text-gray-600">Sat - Sun: 10:00 AM - 4:00 PM</p>
-                      </div>
-                    </div>
+                        {/* Location Section */}
+                        {contactInfo?.locations && contactInfo.locations.length > 0 && (
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                              <MapPin className="h-5 w-5 text-[#6F4E37]" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-gray-900 mb-1">Address</h3>
+                              {contactInfo.locations.map((location, index) => (
+                                <div key={index} className="mb-2 last:mb-0">
+                                  {location.label && location.label !== "Main Office" && (
+                                    <p className="text-xs text-gray-500 font-medium">{location.label}</p>
+                                  )}
+                                  {formatAddress(location).map((line, lineIndex) => (
+                                    <p key={lineIndex} className="text-gray-600">
+                                      {line}
+                                    </p>
+                                  ))}
+                                  {location.googleMapsUrl && (
+                                    <a
+                                      href={location.googleMapsUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[#6F4E37] text-sm hover:underline"
+                                    >
+                                      View on Google Maps
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Business Hours - Static for now */}
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-5 w-5 text-[#6F4E37]" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900 mb-1">Hours</h3>
+                            <p className="text-gray-600">Mon - Fri: 9:00 AM - 6:00 PM</p>
+                            <p className="text-gray-600">Sat - Sun: 10:00 AM - 4:00 PM</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
