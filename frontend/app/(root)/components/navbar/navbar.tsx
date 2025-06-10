@@ -3,11 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Menu } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 
 // Import the separate components
 import SearchComponent from "../search-bar/search-bar"
@@ -26,6 +26,7 @@ export default function Navbar() {
     { name: "NEW ARRIVALS", href: "/new-arrivals" },
     { name: "CATEGORIES", href: "/categories" },
     { name: "ABOUT", href: "/about" },
+    { name: "CONTACT", href: "/contact" },
   ]
 
   const handleSearch = (query: string) => {
@@ -56,83 +57,86 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-white via-gray-50 to-white backdrop-blur-md border-b border-gray-200/50 shadow-lg shadow-[#6F4E37]/5">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6">
-        <div className="flex h-16 sm:h-18 lg:h-20 items-center justify-between">
+    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-amber-100 shadow-sm">
+      <div className="container mx-auto px-4 lg:px-6 xl:px-8">
+        <div className="flex h-16 lg:h-20 items-center justify-between gap-4">
           {/* Left Section - Logo and Navigation */}
-          <div className="flex items-center space-x-4 lg:space-x-8">
+          <div className="flex items-center space-x-6 lg:space-x-8 xl:space-x-10">
             {/* Mobile Menu */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden h-10 w-10 rounded-full bg-gradient-to-r from-[#6F4E37]/10 to-amber-500/10 hover:from-[#6F4E37]/20 hover:to-amber-500/20 transition-all duration-300 hover:scale-110"
+                  className="lg:hidden h-9 w-9 hover:bg-amber-50 transition-colors duration-200"
                 >
                   <Menu className="h-5 w-5 text-[#6F4E37]" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-80 bg-gradient-to-b from-white to-amber-50/30">
-                <div className="flex flex-col space-y-6 mt-8">
-                  <div className="text-center">
-                    <div className="text-2xl font-medium italic bg-gradient-to-r from-[#6F4E37] to-amber-700 bg-clip-text text-transparent font-cormorant">
-                      MENU
-                    </div>
-                  </div>
-                  <Link
-                    href="/"
-                    className="group flex items-center justify-center transition-transform duration-300 hover:scale-105"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#6F4E37] to-amber-700 rounded-full blur-lg opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
-                      <Image
-                        src="/logo/logo.png"
-                        className="relative h-16 sm:h-18 lg:h-20 object-contain filter group-hover:brightness-110 transition-all duration-300"
-                        width={160}
-                        height={80}
-                        alt="Logo"
-                      />
-                    </div>
-                  </Link>
-                  {navigationLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      href={link.href}
-                      className="relative text-lg font-medium italic text-gray-700 hover:text-[#6F4E37] transition-colors duration-300 p-4 rounded-xl group font-cormorant"
-                    >
-                      {link.name}
-                      <span className="absolute bottom-2 left-4 w-0 h-0.5 bg-[#6F4E37] transition-all duration-300 group-hover:w-[calc(100%-2rem)]"></span>
+              <SheetContent side="left" className="w-72 bg-white p-0">
+                <div className="flex flex-col h-full">
+                  {/* Mobile Header */}
+                  <div className="flex items-center justify-between p-6 border-b border-amber-100">
+                    <Link href="/" className="flex items-center">
+                      <Image src="/logo/logo.png" className="h-12 object-contain" width={120} height={48} alt="Logo" />
                     </Link>
-                  ))}
+                    <SheetClose asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <X className="h-4 w-4 text-[#6F4E37]" />
+                      </Button>
+                    </SheetClose>
+                  </div>
+
+                  {/* Mobile Navigation */}
+                  <nav className="flex-1 px-6 py-8">
+                    <div className="space-y-6">
+                      {navigationLinks.map((link) => (
+                        <SheetClose asChild key={link.name}>
+                          <Link
+                            href={link.href}
+                            className="block text-base font-medium italic text-gray-700 hover:text-[#6F4E37] transition-colors duration-200 font-cormorant py-2"
+                          >
+                            {link.name}
+                          </Link>
+                        </SheetClose>
+                      ))}
+                    </div>
+                  </nav>
+
+                  {/* Mobile Footer */}
+                  <div className="p-6 border-t border-amber-100">
+                    {!isLoggedIn && (
+                      <Button
+                        onClick={handleSignInClick}
+                        className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic"
+                      >
+                        Sign In
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
 
-            {/* Logo - Desktop */}
-            <Link
-              href="/"
-              className="group hidden md:flex items-center transition-transform duration-300 hover:scale-105"
-            >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#6F4E37] to-amber-700 rounded-full blur-lg opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
-                <Image
-                  src="/logo/logo.png"
-                  className="relative h-14 sm:h-16 lg:h-18 xl:h-20 object-contain filter group-hover:brightness-110 transition-all duration-300"
-                  width={140}
-                  height={80}
-                  alt="Logo"
-                />
-              </div>
+            {/* Logo */}
+            <Link href="/" className="flex items-center transition-opacity duration-200 hover:opacity-80">
+              <Image
+                src="/logo/logo.png"
+                className="h-10 lg:h-12 xl:h-14 object-contain"
+                width={120}
+                height={64}
+                alt="Logo"
+              />
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-2 lg:space-x-6">
+            {/* Desktop Navigation - Now in left section */}
+            <nav className="hidden lg:flex items-center space-x-4 xl:space-x-6">
               {navigationLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="relative text-sm lg:text-base xl:text-lg font-medium italic tracking-wide text-gray-700 hover:text-[#6F4E37] transition-colors duration-300 px-3 py-2 group font-cormorant"
+                  className="relative text-xs lg:text-sm font-medium italic text-gray-700 hover:text-[#6F4E37] transition-colors duration-200 font-cormorant group py-2 whitespace-nowrap"
                 >
                   {link.name}
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#6F4E37] transition-all duration-300 group-hover:w-full"></span>
@@ -141,10 +145,12 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Right Section */}
-          <div className="flex items-center space-x-2 lg:space-x-4 flex-shrink-0">
+          {/* Right Section - Actions */}
+          <div className="flex items-center space-x-2 lg:space-x-3">
             {/* Search Component */}
-            <SearchComponent onSearch={handleSearch} />
+            <div className="hidden sm:block">
+              <SearchComponent onSearch={handleSearch} />
+            </div>
 
             {/* Wishlist Icon */}
             <WishlistIcon count={wishlistCount} onClick={handleWishlistClick} />
@@ -158,12 +164,18 @@ export default function Navbar() {
             ) : (
               <Button
                 onClick={handleSignInClick}
-                className="bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic text-base"
+                size="sm"
+                className="hidden sm:inline-flex bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic transition-colors duration-200 text-xs"
               >
                 Sign In
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Mobile Search Bar */}
+        <div className="sm:hidden pb-3">
+          <SearchComponent onSearch={handleSearch} />
         </div>
       </div>
     </header>
