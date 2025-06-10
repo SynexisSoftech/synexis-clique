@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Loader2, ShoppingCart, Heart, Eye, Filter, ChevronDown, X, Search } from "lucide-react"
+import { Loader2, Heart, Eye, Filter, ChevronDown, X, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -612,13 +612,15 @@ export default function NewArrivalsPage() {
                       >
                         <CardContent className="p-0">
                           <div className="relative overflow-hidden rounded-t-lg">
-                            <Image
-                              src={product.images[0] || "/placeholder.png"}
-                              alt={product.title}
-                              width={300}
-                              height={300}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
+                            <Link href={`/products/${product._id}`} className="block">
+                              <Image
+                                src={product.images[0] || "/placeholder.png"}
+                                alt={product.title}
+                                width={300}
+                                height={300}
+                                className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                              />
+                            </Link>
 
                             {/* Badges */}
                             <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -660,9 +662,11 @@ export default function NewArrivalsPage() {
                           </div>
 
                           <div className="p-4">
-                            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#6F4E37] transition-colors">
-                              {product.title}
-                            </h3>
+                            <Link href={`/products/${product._id}`} className="block">
+                              <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#6F4E37] transition-colors cursor-pointer">
+                                {product.title}
+                              </h3>
+                            </Link>
 
                             {product.brand && <p className="text-sm text-gray-500 mb-2">{product.brand}</p>}
 
@@ -728,8 +732,8 @@ export default function NewArrivalsPage() {
                                 asChild
                               >
                                 <Link href={`/products/${product._id}`}>
-                                  <ShoppingCart className="h-4 w-4 mr-1" />
-                                  {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  {product.stockQuantity === 0 ? "Out of Stock" : "View Details"}
                                 </Link>
                               </Button>
                             </div>

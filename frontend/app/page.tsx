@@ -12,6 +12,7 @@ import { CategoryShowcase } from "../app/(root)/components/category-showcase/sho
 import GenderCategories from "../app/(root)/components/category-homepage/gender-showcase"
 import CategoryCom from "../app/(root)/components/category-homepage/category-showcase"
 import NewArrivalsSection from "./(root)/components/new-arrival/page"
+import TopSalesSection from "./(root)/components/top-sales/page"
 
 export default function HomePage() {
   return (
@@ -22,6 +23,7 @@ export default function HomePage() {
       <GenderCategories />
       <CategoryCom />
       <NewArrivalsSection />
+      <TopSalesSection />
       <FAQ />
       <Footer />
       <ButtonTop />
