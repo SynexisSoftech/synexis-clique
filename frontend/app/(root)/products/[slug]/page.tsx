@@ -29,56 +29,129 @@ import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { Slider } from "@/components/ui/slider"
 import { motion } from "framer-motion"
-import { productsService, type Product } from "../../../../service/ProductsService"
+import { productsService } from "../../../../service/ProductsService"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Navbar from "../../components/navbar/navbar"
 import Footer from "../../components/footer/footer"
 
-// Helper function to map API product to UI product
+// Add proper TypeScript interfaces
+interface ICategory {
+  _id: string
+  title: string
+}
+
+interface ISubcategory {
+  _id: string
+  title: string
+}
+
+interface IDimensions {
+  length: number
+  width: number
+  height: number
+  unit?: string
+}
+
+interface ICustomDetail {
+  label: string
+  value: string
+}
+
+// Update the Product interface to match your model
+interface Product {
+  _id: string
+  title: string
+  description: string
+  shortDescription?: string
+  categoryId: string | ICategory
+  subcategoryId: string | ISubcategory
+  originalPrice: number
+  discountPrice?: number
+  stockQuantity: number
+  features?: string[]
+  colors?: string[]
+  sizes?: string[]
+  brand?: string
+  tags?: string[]
+  returnPolicy?: string
+  warranty?: string
+  weight?: string
+  dimensions?: IDimensions
+  material?: string
+  images: string[]
+  customDetails?: ICustomDetail[]
+  status: "active" | "inactive" | "out-of-stock"
+  isCashOnDeliveryAvailable: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 const mapApiProductToUiProduct = (product: Product) => {
+  // Calculate final price
+  const finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : product.originalPrice
+
+  // Calculate discount percentage
+  const discountPercentage =
+    product.discountPrice && product.discountPrice > 0
+      ? Math.round(((product.originalPrice - product.discountPrice) / product.originalPrice) * 100)
+      : 0
+
   return {
-    id: product._id, // Keep as string to avoid ID format issues
+    id: product._id,
     name: product.title,
     description: product.description,
-    longDescription: product.description, // Use description as long description for now
-    price: product.price || 0,
+    shortDescription: product.shortDescription || product.description,
+    longDescription: product.description,
+    price: product.originalPrice,
+    originalPrice: product.originalPrice,
+    discountPrice: product.discountPrice || 0,
+    finalPrice: finalPrice,
+    discountPercentage: discountPercentage,
     images: product.images && product.images.length > 0 ? product.images : ["/placeholder.svg?height=600&width=600"],
-    videos: [], // Default empty array, adjust based on your data model
     rotationImages:
       product.images && product.images.length > 0 ? product.images : ["/placeholder.svg?height=600&width=600"],
-    category: typeof product.categoryId === "object" ? product.categoryId.title : "Unknown",
-    featured: product.isFeatured || false,
-    inStock: (product.stockQuantity || 0) > 0,
-    color: product.colors && product.colors.length > 0 ? product.colors[0] : "Blue",
-    availableColors: product.colors || ["Blue", "Black", "Red", "Green"],
-    availableSizes: product.sizes || ["38", "39", "40", "41", "42", "43", "44"],
-    material: "Synthetic mesh, rubber sole", // Default value, adjust based on your data model
-    weight: product.weight ? `${product.weight}kg` : "280g (per shoe, size 42)", // Default value
-    origin: "Made in Nepal", // Default value, adjust based on your data model
-    rating: product.rating || 4.5,
-    reviews: product.reviewsCount || 24,
-    features: [
-      "High-quality construction",
-      "Durable materials",
-      "Comfortable fit",
-      "Stylish design",
-      "Great value for money",
-    ], // Default features, adjust based on your data model
+    category: typeof product.categoryId === "object" && product.categoryId ? product.categoryId.title : "Unknown",
+    subcategory:
+      typeof product.subcategoryId === "object" && product.subcategoryId ? product.subcategoryId.title : "Unknown",
+    featured: product.status === "active",
+    inStock: product.stockQuantity > 0 && product.status !== "out-of-stock",
+    stockQuantity: product.stockQuantity,
+    status: product.status,
+    colors: product.colors || [],
+    availableColors: product.colors || [],
+    sizes: product.sizes || [],
+    availableSizes: product.sizes || [],
+    features: product.features || [],
     brand: product.brand || "Unknown",
-    stock: product.stockQuantity || 0,
-    tags: product.tags ? (typeof product.tags === "string" ? product.tags.split(",") : product.tags) : [],
-    seoKeywords: product.seoKeywords
-      ? typeof product.seoKeywords === "string"
-        ? product.seoKeywords.split(",")
-        : product.seoKeywords
-      : [],
-    originalPrice: product.originalPrice,
-    discountPrice: product.discountPrice,
-    finalPrice: product.finalPrice || product.price || 0,
+    material: product.material || "Not specified",
+    weight: product.weight || "Not specified",
+    dimensions: product.dimensions
+      ? {
+          length: product.dimensions.length,
+          width: product.dimensions.width,
+          height: product.dimensions.height,
+          unit: product.dimensions.unit || "cm",
+        }
+      : null,
+    returnPolicy: product.returnPolicy || "Standard return policy applies",
+    warranty: product.warranty || "Standard warranty applies",
+    tags: product.tags || [],
+    customDetails: product.customDetails || [],
+    isCashOnDeliveryAvailable: product.isCashOnDeliveryAvailable,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    // Default values for UI
+    rating: 4.5, // You might want to calculate this from reviews
+    reviews: 24, // You might want to get this from a reviews collection
+    stock: product.stockQuantity, // Add this for compatibility
   }
 }
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
+interface ProductPageProps {
+  params: Promise<{ slug: string }>
+}
+
+export default function ProductPage({ params }: ProductPageProps) {
   const [selectedSize, setSelectedSize] = useState("40")
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
@@ -91,9 +164,26 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const [error, setError] = useState<string | null>(null)
   const [product, setProduct] = useState<any>(null)
   const [relatedProducts, setRelatedProducts] = useState<any[]>([])
+  const [slug, setSlug] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const { toast } = useToast()
+
+  // Resolve params first
+  useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params
+        setSlug(resolvedParams.slug)
+      } catch (error) {
+        console.error("Error resolving params:", error)
+        setError("Failed to load product")
+        setLoading(false)
+      }
+    }
+
+    resolveParams()
+  }, [params])
 
   const addToCart = () => {
     if (!product) return
@@ -107,25 +197,39 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   // Fetch product data
   useEffect(() => {
     const fetchProduct = async () => {
+      if (!slug) return
+
       try {
         setLoading(true)
+        setError(null) // Reset error state
+
         // Use the slug parameter directly - it could be either a string ID or a slug
-        const apiProduct = await productsService.getProductById(params.slug)
+        const apiProduct = await productsService.getProductById(slug)
         const mappedProduct = mapApiProductToUiProduct(apiProduct)
         setProduct(mappedProduct)
 
+        // Set default size if available
+        if (mappedProduct.availableSizes && mappedProduct.availableSizes.length > 0) {
+          setSelectedSize(mappedProduct.availableSizes[0])
+        }
+
         // Fetch related products (same category)
         if (typeof apiProduct.categoryId === "string") {
-          const relatedResponse = await productsService.getProducts({
-            categoryId: apiProduct.categoryId,
-            status: "active",
-            limit: 3,
-          })
-          const mappedRelated = relatedResponse.products
-            .filter((p) => p._id !== apiProduct._id)
-            .slice(0, 3)
-            .map(mapApiProductToUiProduct)
-          setRelatedProducts(mappedRelated)
+          try {
+            const relatedResponse = await productsService.getProducts({
+              categoryId: apiProduct.categoryId,
+              status: "active",
+              limit: 4,
+            })
+            const mappedRelated = relatedResponse.products
+              .filter((p) => p._id !== apiProduct._id)
+              .slice(0, 3)
+              .map(mapApiProductToUiProduct)
+            setRelatedProducts(mappedRelated)
+          } catch (relatedError) {
+            console.warn("Failed to fetch related products:", relatedError)
+            setRelatedProducts([])
+          }
         }
       } catch (err: any) {
         console.error("Error fetching product:", err)
@@ -140,8 +244,11 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       }
     }
 
-    fetchProduct()
-  }, [params.slug, toast])
+    // Only fetch if we have a slug
+    if (slug) {
+      fetchProduct()
+    }
+  }, [slug, toast])
 
   // Sample reviews data (you can replace this with API call)
   const reviews = [
@@ -297,9 +404,16 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>{error || "Product not found"}</AlertDescription>
           </Alert>
-          <div className="mt-4">
+          <div className="mt-4 flex gap-4">
             <Button asChild className="bg-rose-600 hover:bg-rose-700">
               <Link href="/products">Back to Products</Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="border-rose-200 text-rose-600 hover:bg-rose-50"
+            >
+              Try Again
             </Button>
           </div>
         </div>
@@ -449,16 +563,37 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               </div>
 
               {/* Price display with discount if applicable */}
-              {product.discountPrice ? (
+              {product.discountPrice && product.discountPrice > 0 ? (
                 <div className="flex items-center gap-3 mt-3">
-                  <p className="text-2xl font-bold text-rose-600">NPR {product.finalPrice.toLocaleString()}</p>
-                  <p className="text-lg text-slate-500 line-through">NPR {product.originalPrice.toLocaleString()}</p>
-                  <Badge className="bg-rose-600">
-                    {Math.round(((product.originalPrice - product.finalPrice) / product.originalPrice) * 100)}% OFF
-                  </Badge>
+                  <p className="text-3xl font-bold text-rose-600">NPR {product.finalPrice.toLocaleString()}</p>
+                  <p className="text-xl text-slate-500 line-through">NPR {product.originalPrice.toLocaleString()}</p>
+                  <Badge className="bg-rose-600 text-white">{product.discountPercentage}% OFF</Badge>
                 </div>
               ) : (
-                <p className="text-2xl font-bold mt-3 text-rose-600">NPR {product.price.toLocaleString()}</p>
+                <p className="text-3xl font-bold mt-3 text-rose-600">NPR {product.originalPrice.toLocaleString()}</p>
+              )}
+
+              {/* Stock status */}
+              <div className="mt-2">
+                <Badge
+                  variant={product.inStock ? "default" : "destructive"}
+                  className={product.inStock ? "bg-green-100 text-green-800" : ""}
+                >
+                  {product.inStock
+                    ? `In Stock (${product.stockQuantity} available)`
+                    : product.status === "out-of-stock"
+                      ? "Out of Stock"
+                      : "Unavailable"}
+                </Badge>
+              </div>
+
+              {/* Cash on Delivery */}
+              {product.isCashOnDeliveryAvailable && (
+                <div className="mt-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    💰 Cash on Delivery Available
+                  </Badge>
+                </div>
               )}
             </div>
             <p className="text-slate-600">{product.description}</p>
@@ -573,26 +708,55 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               </div>
             </div>
             <div className="border-t border-slate-200 pt-4 space-y-2">
+              {product.brand && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Brand:</span>
+                  <span className="text-sm font-medium text-slate-900">{product.brand}</span>
+                </div>
+              )}
+              {product.material && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Material:</span>
+                  <span className="text-sm font-medium text-slate-900">{product.material}</span>
+                </div>
+              )}
+              {product.weight && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Weight:</span>
+                  <span className="text-sm font-medium text-slate-900">{product.weight}</span>
+                </div>
+              )}
+              {product.dimensions && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Dimensions:</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height}{" "}
+                    {product.dimensions.unit}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Color:</span>
-                <span className="text-sm font-medium text-slate-900">{product.color}</span>
+                <span className="text-sm text-slate-600">Category:</span>
+                <span className="text-sm font-medium text-slate-900">{product.category}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Material:</span>
-                <span className="text-sm font-medium text-slate-900">{product.material}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Weight:</span>
-                <span className="text-sm font-medium text-slate-900">{product.weight}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600">Origin:</span>
-                <span className="text-sm font-medium text-slate-900">{product.origin}</span>
-              </div>
+              {product.subcategory && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Subcategory:</span>
+                  <span className="text-sm font-medium text-slate-900">{product.subcategory}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-sm text-slate-600">Availability:</span>
                 <span className={`text-sm font-medium ${product.inStock ? "text-green-600" : "text-red-600"}`}>
-                  {product.inStock ? `In Stock (${product.stock} available)` : "Out of Stock"}
+                  {product.inStock ? `In Stock (${product.stockQuantity} available)` : "Out of Stock"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Cash on Delivery:</span>
+                <span
+                  className={`text-sm font-medium ${product.isCashOnDeliveryAvailable ? "text-green-600" : "text-red-600"}`}
+                >
+                  {product.isCashOnDeliveryAvailable ? "Available" : "Not Available"}
                 </span>
               </div>
             </div>
@@ -646,60 +810,153 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
             </TabsContent>
 
             <TabsContent value="specifications" className="p-4 border rounded-md mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-2 text-slate-900">Product Details</h3>
-                  <ul className="space-y-2">
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Material</span>
-                      <span className="text-slate-900">{product.material}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Weight</span>
-                      <span className="text-slate-900">{product.weight}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Origin</span>
-                      <span className="text-slate-900">{product.origin}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Color</span>
-                      <span className="text-slate-900">{product.color}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Available Sizes</span>
-                      <span className="text-slate-900">{product.availableSizes.join(", ")}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Brand</span>
-                      <span className="text-slate-900">{product.brand}</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-slate-600">Stock</span>
-                      <span className="text-slate-900">{product.stock} units</span>
-                    </li>
-                  </ul>
+                  <h3 className="font-semibold mb-4 text-slate-900">Product Details</h3>
+                  <div className="space-y-3">
+                    {product.brand && (
+                      <div className="flex justify-between py-2 border-b border-slate-100">
+                        <span className="text-slate-600">Brand</span>
+                        <span className="text-slate-900 font-medium">{product.brand}</span>
+                      </div>
+                    )}
+                    {product.material && (
+                      <div className="flex justify-between py-2 border-b border-slate-100">
+                        <span className="text-slate-600">Material</span>
+                        <span className="text-slate-900 font-medium">{product.material}</span>
+                      </div>
+                    )}
+                    {product.weight && (
+                      <div className="flex justify-between py-2 border-b border-slate-100">
+                        <span className="text-slate-600">Weight</span>
+                        <span className="text-slate-900 font-medium">{product.weight}</span>
+                      </div>
+                    )}
+                    {product.dimensions && (
+                      <div className="flex justify-between py-2 border-b border-slate-100">
+                        <span className="text-slate-600">Dimensions</span>
+                        <span className="text-slate-900 font-medium">
+                          {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height}{" "}
+                          {product.dimensions.unit}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between py-2 border-b border-slate-100">
+                      <span className="text-slate-600">Stock Quantity</span>
+                      <span className="text-slate-900 font-medium">{product.stockQuantity} units</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100">
+                      <span className="text-slate-600">Status</span>
+                      <Badge variant={product.status === "active" ? "default" : "secondary"}>
+                        {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
+
                 <div>
-                  <h3 className="font-semibold mb-2 text-slate-900">Features</h3>
-                  <ul className="list-disc list-inside space-y-1 text-slate-600">
+                  <h3 className="font-semibold mb-4 text-slate-900">Additional Information</h3>
+                  <div className="space-y-3">
+                    {product.colors && product.colors.length > 0 && (
+                      <div className="py-2 border-b border-slate-100">
+                        <span className="text-slate-600 block mb-2">Available Colors</span>
+                        <div className="flex flex-wrap gap-2">
+                          {product.colors.map((color, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {color}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {product.sizes && product.sizes.length > 0 && (
+                      <div className="py-2 border-b border-slate-100">
+                        <span className="text-slate-600 block mb-2">Available Sizes</span>
+                        <div className="flex flex-wrap gap-2">
+                          {product.sizes.map((size, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {size}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {product.tags && product.tags.length > 0 && (
+                      <div className="py-2 border-b border-slate-100">
+                        <span className="text-slate-600 block mb-2">Tags</span>
+                        <div className="flex flex-wrap gap-2">
+                          {product.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="py-2 border-b border-slate-100">
+                      <span className="text-slate-600 block mb-2">Cash on Delivery</span>
+                      <Badge variant={product.isCashOnDeliveryAvailable ? "default" : "destructive"}>
+                        {product.isCashOnDeliveryAvailable ? "Available" : "Not Available"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features Section */}
+              {product.features && product.features.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-3 text-slate-900">Key Features</h3>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {product.features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
+                      <motion.li
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="flex items-start gap-2 text-slate-700"
+                      >
+                        <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        {feature}
+                      </motion.li>
                     ))}
                   </ul>
-                  {product.tags && product.tags.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-semibold mb-2 text-slate-900">Tags</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {product.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {typeof tag === "string" ? tag.trim() : tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
+              )}
+
+              {/* Custom Details Section */}
+              {product.customDetails && product.customDetails.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-3 text-slate-900">Additional Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {product.customDetails.map((detail, index) => (
+                      <div key={index} className="flex justify-between py-2 border-b border-slate-100">
+                        <span className="text-slate-600">{detail.label}</span>
+                        <span className="text-slate-900 font-medium">{detail.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Policies Section */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {product.returnPolicy && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-slate-900">Return Policy</h4>
+                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{product.returnPolicy}</p>
+                  </div>
+                )}
+
+                {product.warranty && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-slate-900">Warranty</h4>
+                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{product.warranty}</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

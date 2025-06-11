@@ -761,7 +761,7 @@ export default function ProductsPage() {
                           >
                             <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 h-full group">
                               <CardHeader className="p-0 relative">
-                                <Link href={`/products/${product.id}`}>
+                                <Link href={`/products/${product.id}`} prefetch={true}>
                                   <div className="overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50">
                                     <Image
                                       src={product.image || "/placeholder.svg?height=400&width=400"}
@@ -784,23 +784,6 @@ export default function ProductsPage() {
                                   </Badge>
                                 )}
                                 <div className="absolute bottom-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="icon"
-                                          variant="secondary"
-                                          className="h-8 w-8 rounded-full bg-white shadow-md"
-                                          onClick={() => handleQuickView(product)}
-                                        >
-                                          <Eye className="h-4 w-4 text-slate-700" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Quick view</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -838,7 +821,7 @@ export default function ProductsPage() {
                                 <Badge variant="secondary" className="mb-2 bg-rose-100 text-rose-700 hover:bg-rose-200">
                                   {product.category}
                                 </Badge>
-                                <Link href={`/products/${product.id}`}>
+                                <Link href={`/products/${product.id}`} prefetch={true}>
                                   <h3 className="font-semibold text-lg text-slate-900 hover:text-rose-600 transition-colors">
                                     {product.name}
                                   </h3>
@@ -945,7 +928,7 @@ export default function ProductsPage() {
                           <Card className="overflow-hidden border shadow-sm hover:shadow transition-shadow group">
                             <div className="flex flex-col sm:flex-row">
                               <div className="sm:w-1/3 lg:w-1/4 relative">
-                                <Link href={`/products/${product.id}`}>
+                                <Link href={`/products/${product.id}`} prefetch={true}>
                                   <div className="overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 h-full">
                                     <Image
                                       src={product.image || "/placeholder.svg?height=300&width=300"}
@@ -989,7 +972,7 @@ export default function ProductsPage() {
                                     <span className="text-xs text-slate-500 ml-1">({product.reviews})</span>
                                   </div>
                                 </div>
-                                <Link href={`/products/${product.id}`}>
+                                <Link href={`/products/${product.id}`} prefetch={true}>
                                   <h3 className="font-semibold text-lg text-slate-900 hover:text-rose-600 transition-colors">
                                     {product.name}
                                   </h3>

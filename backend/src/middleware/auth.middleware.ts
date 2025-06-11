@@ -44,11 +44,11 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
                 return;
             }
 
-            // Optional: Check if user is verified (if necessary for all protected routes)
-            // if (!currentUser.isVerified) {
-            //     res.status(403).json({ message: 'Forbidden: Account not verified.' });
-            //     return;
-            // }
+         
+            if (!currentUser.isVerified) {
+                res.status(403).json({ message: 'Forbidden: Account not verified.' });
+                return;
+            }
 
             // 5. Attach user to the request object
             req.user = currentUser;
