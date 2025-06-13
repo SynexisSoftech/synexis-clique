@@ -17,6 +17,8 @@ import adminHeroRoutes from './routes/admin/adminHero.routes'; // Adjust path as
 import publicHeroRoutes from './routes/public/hero.routes';
 import contactInfoAdminRoutes from './routes/admin/contactinfo.routes'; 
 import publicContactInfoRoutes from './routes/public/publiccontactinfo.route';
+import adminReviewRoutes from './routes/admin/adminReview.routes';
+import publicReviewRoutes from './routes/public/review.routes';
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -58,6 +60,8 @@ app.use('/api/contact-info', publicContactInfoRoutes);
 
 // For Public data fetching (e.g., /api/hero-slides)
 app.use('/api/hero-slides', publicHeroRoutes);
+app.use('/api/admin/reviews', adminReviewRoutes); // Admin review routes
+app.use('/api/products', publicReviewRoutes); // Public review routes (nested under products)
 
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 
