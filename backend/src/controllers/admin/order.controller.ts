@@ -3,11 +3,6 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Order } from '../../models/order.model'; // Adjust path
 import mongoose from 'mongoose';
 
-
-
-
-
-
 /**
  * @desc    Get all orders (admin view)
  * @route   GET /api/admin/orders
@@ -17,7 +12,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const pageSize = Number(req.query.limit) || 10;
     const page = Number(req.query.page) || 1;
-    const { status, search } = req.query; // Filter by status or search by user/product
+    const { status, search } = req.query; // Filter by status or search
 
     const query: any = {};
 
@@ -25,17 +20,24 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
       query.status = (status as string).toUpperCase();
     }
 
-    // This search is a bit more complex as it involves populated fields.
-    // A more advanced search might use aggregation pipelines.
-    // For a basic search, we can look for the transaction_uuid.
+    // Allow searching by transaction_uuid or user's email (if populated)
     if (search) {
-      query.transaction_uuid = { $regex: search, $options: 'i' };
+      const searchRegex = { $regex: search, $options: 'i' };
+      // This requires an aggregation pipeline to search by populated fields effectively.
+      // For simplicity, we'll stick to transaction_uuid for direct queries.
+      // A more robust solution would use $lookup and $match in an aggregation.
+      query.transaction_uuid = searchRegex;
     }
 
     const count = await Order.countDocuments(query);
     const orders = await Order.find(query)
       .populate('userId', 'username email') // Populate user info
-      .populate('productId', 'title originalPrice images') // Populate product info
+      // *** THE FIX IS HERE ***
+      // We now populate the productId field *inside* the items array
+      .populate({
+        path: 'items.productId',
+        select: 'title originalPrice discountPrice images', // Select the fields you need
+      })
       .limit(pageSize)
       .skip(pageSize * (page - 1))
       .sort({ createdAt: -1 });
@@ -65,7 +67,12 @@ export const getOrderById = async (req: AuthRequest, res: Response, next: NextFu
     }
     const order = await Order.findById(req.params.id)
       .populate('userId', 'username email photoURL')
-      .populate('productId'); // Populate with full product details
+      // *** THE FIX IS HERE ***
+      // We populate the productId for each item in the items array
+      .populate({
+        path: 'items.productId',
+        model: 'Product', // Explicitly specify the model to populate from
+      });
 
     if (order) {
       res.json(order);
@@ -104,7 +111,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
         return;
     }
 
-    order.status = status.toUpperCase();
+    order.status = status.toUpperCase() as 'PENDING' | 'COMPLETED' | 'FAILED';
     const updatedOrder = await order.save();
 
     res.json(updatedOrder);

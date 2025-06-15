@@ -116,6 +116,12 @@ icon:Users,
 isActive:false,
     },
      {
+title:"Oders",
+url:"admin/oders",
+icon:Users,
+isActive:false,
+    },
+     {
 title:"contact info",
 url:"admin/contact-info",
 icon:Users,
