@@ -7,18 +7,7 @@ import { CardHeader } from "@/components/ui/card"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import Link from "next/link"
-import {
-  ShoppingCart,
-  Heart,
-  Share2,
-  Star,
-  RotateCw,
-  Check,
-  ThumbsUp,
-  ThumbsDown,
-  Loader2,
-  ChevronRight,
-} from "lucide-react"
+import { Heart, Share2, Star, RotateCw, Check, ThumbsUp, ThumbsDown, Loader2, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -33,6 +22,8 @@ import { productsService } from "../../../../service/ProductsService"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Navbar from "../../components/navbar/navbar"
 import Footer from "../../components/footer/footer"
+import {AddToCartButton} from "@/components/AddToCartButton"
+import { useCart } from "@/hooks/useCart"
 
 // Add proper TypeScript interfaces
 interface ICategory {
@@ -152,8 +143,8 @@ interface ProductPageProps {
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-  const [selectedSize, setSelectedSize] = useState("40")
-  const [quantity, setQuantity] = useState(1)
+  const [selectedSize, setSelectedSize] = useState("")
+  const [selectedColor, setSelectedColor] = useState("")
   const [activeImage, setActiveImage] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [activeVideo, setActiveVideo] = useState(0)
@@ -168,6 +159,10 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const { toast } = useToast()
+  const { getItemQuantity } = useCart()
+
+  // Get current quantity in cart
+  const cartQuantity = product ? getItemQuantity(product.id) : 0
 
   // Resolve params first
   useEffect(() => {
@@ -185,15 +180,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     resolveParams()
   }, [params])
 
-  const addToCart = () => {
-    if (!product) return
-
-    toast({
-      title: "Added to cart",
-      description: `${quantity} × ${product.name} (Size: ${selectedSize}) added to your cart`,
-    })
-  }
-
   // Fetch product data
   useEffect(() => {
     const fetchProduct = async () => {
@@ -208,9 +194,12 @@ export default function ProductPage({ params }: ProductPageProps) {
         const mappedProduct = mapApiProductToUiProduct(apiProduct)
         setProduct(mappedProduct)
 
-        // Set default size if available
+        // Set default size and color if available
         if (mappedProduct.availableSizes && mappedProduct.availableSizes.length > 0) {
           setSelectedSize(mappedProduct.availableSizes[0])
+        }
+        if (mappedProduct.availableColors && mappedProduct.availableColors.length > 0) {
+          setSelectedColor(mappedProduct.availableColors[0])
         }
 
         // Fetch related products (same category)
@@ -587,6 +576,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </Badge>
               </div>
 
+              {/* Cart quantity display */}
+              {cartQuantity > 0 && (
+                <div className="mt-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    🛒 {cartQuantity} in cart
+                  </Badge>
+                </div>
+              )}
+
               {/* Cash on Delivery */}
               {product.isCashOnDeliveryAvailable && (
                 <div className="mt-2">
@@ -598,40 +596,46 @@ export default function ProductPage({ params }: ProductPageProps) {
             </div>
             <p className="text-slate-600">{product.description}</p>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900">Color</label>
-                <div className="flex gap-2">
-                  {product.availableColors.map((color) => (
-                    <motion.div
-                      key={color}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
-                        color === product.color ? "border-rose-500" : "border-transparent hover:border-slate-300"
-                      }`}
-                      style={{
-                        backgroundColor:
-                          color === "Black"
-                            ? "#000"
-                            : color === "Brown"
-                              ? "#8B4513"
-                              : color === "Blue"
-                                ? "#1E90FF"
-                                : color === "Red"
-                                  ? "#FF4136"
-                                  : color === "Green"
-                                    ? "#2ECC40"
-                                    : "#FFFFFF",
-                        boxShadow: color === "White" ? "inset 0 0 0 1px #e2e8f0" : "none",
-                      }}
-                      title={color}
-                    >
-                      {color === product.color && <Check className="h-4 w-4 text-white m-auto" />}
-                    </motion.div>
-                  ))}
+              {/* Color Selection */}
+              {product.availableColors.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-900">Color</label>
+                  <div className="flex gap-2">
+                    {product.availableColors.map((color) => (
+                      <motion.div
+                        key={color}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
+                          color === selectedColor ? "border-rose-500" : "border-transparent hover:border-slate-300"
+                        }`}
+                        style={{
+                          backgroundColor:
+                            color === "Black"
+                              ? "#000"
+                              : color === "Brown"
+                                ? "#8B4513"
+                                : color === "Blue"
+                                  ? "#1E90FF"
+                                  : color === "Red"
+                                    ? "#FF4136"
+                                    : color === "Green"
+                                      ? "#2ECC40"
+                                      : "#FFFFFF",
+                          boxShadow: color === "White" ? "inset 0 0 0 1px #e2e8f0" : "none",
+                        }}
+                        title={color}
+                        onClick={() => setSelectedColor(color)}
+                      >
+                        {color === selectedColor && <Check className="h-4 w-4 text-white m-auto" />}
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              )}
+
+              {/* Size Selection */}
+              {product.availableSizes.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-900">Size</label>
                   <Select value={selectedSize} onValueChange={setSelectedSize}>
@@ -647,37 +651,20 @@ export default function ProductPage({ params }: ProductPageProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-900">Quantity</label>
-                  <div className="flex items-center border rounded-md">
-                    <button
-                      className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    >
-                      -
-                    </button>
-                    <div className="flex-1 text-center">{quantity}</div>
-                    <button
-                      className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
+              )}
+
+              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="sm:flex-1">
-                  <Button
-                    size="lg"
-                    className="w-full bg-rose-600 hover:bg-rose-700 transition-colors"
-                    onClick={addToCart}
+                  <AddToCartButton
+                    productId={product.id}
+                    productTitle={product.name}
+                    selectedSize={selectedSize}
+                    selectedColor={selectedColor}
+                    maxQuantity={product.stockQuantity}
                     disabled={!product.inStock || product.stock <= 0}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    {product.inStock ? "Add to Cart" : "Out of Stock"}
-                  </Button>
+                    className="w-full"
+                  />
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="sm:flex-1">
                   <Button
@@ -707,6 +694,8 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </motion.div>
               </div>
             </div>
+
+            {/* Product Details */}
             <div className="border-t border-slate-200 pt-4 space-y-2">
               {product.brand && (
                 <div className="flex justify-between">
@@ -763,6 +752,7 @@ export default function ProductPage({ params }: ProductPageProps) {
           </motion.div>
         </div>
 
+        {/* Tabs Section - Description, Specifications, Reviews */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -1087,6 +1077,7 @@ export default function ProductPage({ params }: ProductPageProps) {
           </Tabs>
         </motion.div>
 
+        {/* Related Products */}
         {relatedProducts.length > 0 && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -1131,13 +1122,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                       <p className="font-semibold mt-2 text-rose-600">NPR {relatedProduct.price.toLocaleString()}</p>
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
-                      <Button
-                        className="w-full bg-rose-600 hover:bg-rose-700 transition-colors"
+                      <AddToCartButton
+                        productId={relatedProduct.id}
+                        productTitle={relatedProduct.name}
+                        maxQuantity={relatedProduct.stockQuantity}
                         disabled={!relatedProduct.inStock}
-                      >
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {relatedProduct.inStock ? "Add to Cart" : "Out of Stock"}
-                      </Button>
+                        className="w-full"
+                      />
                     </CardFooter>
                   </Card>
                 </motion.div>

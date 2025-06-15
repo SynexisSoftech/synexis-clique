@@ -74,68 +74,191 @@
 
 
 
-// lib/apiClient.ts// utils/axiosInstance.ts
-import axios from 'axios';
+// // lib/apiClient.ts// utils/axiosInstance.ts
+// import axios from 'axios';
+
+// const apiClient = axios.create({
+//   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', // Keep this, it's correct
+//   headers: {
+//     'Content-Type': 'application/json',
+//   },
+//   withCredentials: true, // It's often good to set this at the instance level if most requests need it
+// });
+
+// // Function to update the token in the instance
+// export const updateApiToken = (token: string | null) => {
+//   if (token) {
+//     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+//   } else {
+//     delete apiClient.defaults.headers.common['Authorization'];
+//   }
+// };
+
+// export const clearApiToken = () => {
+//   delete apiClient.defaults.headers.common['Authorization'];
+// };
+
+// apiClient.interceptors.response.use(
+//   (response) => response,
+//   async (error) => {
+//     const originalRequest = error.config;
+
+//     // Check if it's a 401 error and not a retry attempt
+//     if (error.response?.status === 401 && !originalRequest._retry) { // Use optional chaining for safety
+//       originalRequest._retry = true; // Mark as retried to prevent infinite loops
+
+//       try {
+//         // --- FIX HERE: Use apiClient for the refresh token request ---
+//         const { data } = await apiClient.post(
+//           '/api/auth/refresh-token', // Just the relative path, baseURL handles the rest
+//           {},
+//           { withCredentials: true } // Ensure withCredentials is set, even if on instance, for clarity
+//         );
+
+//         const newAccessToken = data.accessToken;
+//         updateApiToken(newAccessToken); // Update the in-memory token for future requests
+
+//         // Update the original failed request's Authorization header and re-send it
+//         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+//         return apiClient(originalRequest); // Resend the original request with the new token
+//       } catch (refreshError) {
+//         console.error("Token refresh failed:", refreshError);
+//         clearApiToken(); // Clear token on refresh failure
+//         localStorage.removeItem('user'); // Clear user data
+//         if (typeof window !== 'undefined') {
+//           // Dispatch a custom event for the AuthContext to listen to and trigger full logout
+//           window.dispatchEvent(new Event('auth-failure'));
+//         }
+//         return Promise.reject(refreshError); // Reject the promise with the refresh error
+//       }
+//     }
+
+//     // For any other error (not 401 or already retried), just reject
+//     return Promise.reject(error);
+//   }
+// );
+
+// export default apiClient;
+import axios from "axios"
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', // Keep this, it's correct
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-  withCredentials: true, // It's often good to set this at the instance level if most requests need it
-});
+  withCredentials: true,
+})
+
+// Function to get token from localStorage or wherever you store it
+const getStoredToken = (): string | null => {
+  if (typeof window !== "undefined") {
+    // Try to get token from localStorage
+    const user = localStorage.getItem("user")
+    if (user) {
+      try {
+        const userData = JSON.parse(user)
+        return userData.token || userData.accessToken || null
+      } catch (error) {
+        console.error("Error parsing user data:", error)
+        return null
+      }
+    }
+
+    // Alternative: if you store token separately
+    return localStorage.getItem("token") || localStorage.getItem("accessToken")
+  }
+  return null
+}
 
 // Function to update the token in the instance
 export const updateApiToken = (token: string | null) => {
   if (token) {
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`
   } else {
-    delete apiClient.defaults.headers.common['Authorization'];
+    delete apiClient.defaults.headers.common["Authorization"]
   }
-};
+}
 
 export const clearApiToken = () => {
-  delete apiClient.defaults.headers.common['Authorization'];
-};
+  delete apiClient.defaults.headers.common["Authorization"]
+}
+
+// Initialize token on app start
+const initializeToken = () => {
+  const token = getStoredToken()
+  if (token) {
+    updateApiToken(token)
+  }
+}
+
+// Call this when the module loads
+initializeToken()
+
+// Request interceptor to ensure token is always included
+apiClient.interceptors.request.use(
+  (config) => {
+    // If no Authorization header is set, try to get token from storage
+    if (!config.headers["Authorization"]) {
+      const token = getStoredToken()
+      if (token) {
+        config.headers["Authorization"] = `Bearer ${token}`
+      }
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  },
+)
 
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config
 
     // Check if it's a 401 error and not a retry attempt
-    if (error.response?.status === 401 && !originalRequest._retry) { // Use optional chaining for safety
-      originalRequest._retry = true; // Mark as retried to prevent infinite loops
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
 
       try {
-        // --- FIX HERE: Use apiClient for the refresh token request ---
-        const { data } = await apiClient.post(
-          '/api/auth/refresh-token', // Just the relative path, baseURL handles the rest
-          {},
-          { withCredentials: true } // Ensure withCredentials is set, even if on instance, for clarity
-        );
+        const { data } = await apiClient.post("/api/auth/refresh-token", {}, { withCredentials: true })
 
-        const newAccessToken = data.accessToken;
-        updateApiToken(newAccessToken); // Update the in-memory token for future requests
+        const newAccessToken = data.accessToken
+        updateApiToken(newAccessToken)
+
+        // Update stored token
+        if (typeof window !== "undefined") {
+          const user = localStorage.getItem("user")
+          if (user) {
+            try {
+              const userData = JSON.parse(user)
+              userData.token = newAccessToken
+              localStorage.setItem("user", JSON.stringify(userData))
+            } catch (error) {
+              console.error("Error updating stored user data:", error)
+            }
+          }
+        }
 
         // Update the original failed request's Authorization header and re-send it
-        originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        return apiClient(originalRequest); // Resend the original request with the new token
+        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`
+        return apiClient(originalRequest)
       } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
-        clearApiToken(); // Clear token on refresh failure
-        localStorage.removeItem('user'); // Clear user data
-        if (typeof window !== 'undefined') {
-          // Dispatch a custom event for the AuthContext to listen to and trigger full logout
-          window.dispatchEvent(new Event('auth-failure'));
+        console.error("Token refresh failed:", refreshError)
+        clearApiToken()
+        localStorage.removeItem("user")
+        localStorage.removeItem("token")
+        localStorage.removeItem("accessToken")
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("auth-failure"))
         }
-        return Promise.reject(refreshError); // Reject the promise with the refresh error
+        return Promise.reject(refreshError)
       }
     }
 
-    // For any other error (not 401 or already retried), just reject
-    return Promise.reject(error);
-  }
-);
+    return Promise.reject(error)
+  },
+)
 
-export default apiClient;
+export default apiClient

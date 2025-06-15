@@ -19,6 +19,10 @@ import contactInfoAdminRoutes from './routes/admin/contactinfo.routes';
 import publicContactInfoRoutes from './routes/public/publiccontactinfo.route';
 import adminReviewRoutes from './routes/admin/adminReview.routes';
 import publicReviewRoutes from './routes/public/review.routes';
+import adminOrderRoutes from './routes/admin/order.routes';
+import userOrderRoutes from './routes/public/order.routes';
+import publicCartRoutes from './routes/public/cart.route'; // Adjust path if needed
+import adminCartRoutes from './routes/admin/cart.route'; 
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -62,7 +66,15 @@ app.use('/api/contact-info', publicContactInfoRoutes);
 app.use('/api/hero-slides', publicHeroRoutes);
 app.use('/api/admin/reviews', adminReviewRoutes); // Admin review routes
 app.use('/api/products', publicReviewRoutes); // Public review routes (nested under products)
+app.use('/api/admin/orders', adminOrderRoutes); // <-- ADD THIS
+app.use('/api/cart', publicCartRoutes);
 
+// Mount the admin cart routes
+// Requests to /api/admin/carts, /api/admin/carts/:id will be handled by this router
+app.use('/api/admin/carts', adminCartRoutes);
+
+// ... app.use('/api/products', publicProductRoutes);
+app.use('/api/orders', userOrderRoutes); // <-- AND ADD THIS
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 
 app.get('/', (req: Request, res: Response) => {

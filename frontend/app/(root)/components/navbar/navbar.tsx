@@ -8,6 +8,8 @@ import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
+import { useAuth } from "../../../context/AuthContext"
+import { useCart } from "@/hooks/useCart"
 
 // Import the separate components
 import SearchComponent from "../search-bar/search-bar"
@@ -17,9 +19,9 @@ import ProfileDropdown from "../profile-dropdown/profile-dropdown"
 
 export default function Navbar() {
   const router = useRouter()
-  const [cartCount] = useState(3)
-  const [wishlistCount] = useState(5)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { cartItemsCount } = useCart()
+  const [wishlistCount] = useState(5) // You can replace this with actual wishlist count
 
   const navigationLinks = [
     { name: "PRODUCTS", href: "/products" },
@@ -32,28 +34,27 @@ export default function Navbar() {
   const handleSearch = (query: string) => {
     console.log("Searching for:", query)
     // Handle search logic here
+    router.push(`/products?search=${encodeURIComponent(query)}`)
   }
 
   const handleWishlistClick = () => {
-    console.log("Wishlist clicked")
-    // Handle wishlist navigation
+    if (isAuthenticated) {
+      router.push("/wishlist")
+    } else {
+      router.push("/auth/login")
+    }
   }
 
   const handleCartClick = () => {
-    console.log("Cart clicked")
-    // Handle cart navigation - this will be handled by the dropdown
+    if (isAuthenticated) {
+      router.push("/cart")
+    } else {
+      router.push("/auth/login")
+    }
   }
 
   const handleSignInClick = () => {
-    // For demo purposes, we'll toggle the login state
-    // In a real app, this would redirect to the sign-in page
     router.push("/auth/login")
-
-    // This is just for demonstration - in a real app you wouldn't set isLoggedIn here
-    // but after actual authentication
-    setTimeout(() => {
-      setIsLoggedIn(true)
-    }, 500)
   }
 
   return (
@@ -106,7 +107,7 @@ export default function Navbar() {
 
                   {/* Mobile Footer */}
                   <div className="p-6 border-t border-amber-100">
-                    {!isLoggedIn && (
+                    {!authLoading && !isAuthenticated && (
                       <Button
                         onClick={handleSignInClick}
                         className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic"
@@ -156,19 +157,23 @@ export default function Navbar() {
             <WishlistIcon count={wishlistCount} onClick={handleWishlistClick} />
 
             {/* Cart Dropdown */}
-            <CartDropdown count={cartCount} onClick={handleCartClick} />
+            <CartDropdown count={cartItemsCount} onClick={handleCartClick} />
 
             {/* Sign In Button or Profile Dropdown */}
-            {isLoggedIn ? (
-              <ProfileDropdown />
-            ) : (
-              <Button
-                onClick={handleSignInClick}
-                size="sm"
-                className="hidden sm:inline-flex bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic transition-colors duration-200 text-xs"
-              >
-                Sign In
-              </Button>
+            {!authLoading && (
+              <>
+                {isAuthenticated ? (
+                  <ProfileDropdown />
+                ) : (
+                  <Button
+                    onClick={handleSignInClick}
+                    size="sm"
+                    className="hidden sm:inline-flex bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic transition-colors duration-200 text-xs"
+                  >
+                    Sign In
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
