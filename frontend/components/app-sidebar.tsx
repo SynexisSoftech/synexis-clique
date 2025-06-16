@@ -122,7 +122,7 @@ const data = {
     },
     {
       title: "Orders",
-      url: "/admin/orders",
+      url: "/admin/oders",
       icon: ShoppingCart,
       isActive: false,
     },

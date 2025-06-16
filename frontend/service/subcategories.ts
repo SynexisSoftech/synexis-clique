@@ -106,17 +106,23 @@ class SubcategoriesService {
       return response.data;
     } catch (error: any) {
       console.error("Error creating subcategory:", error);
-      const message = error.response?.data?.message || "Failed to create subcategory";
-      throw new Error(message);
+
+      // Axios errors typically have a 'response' property if the server responded.
+      throw error; // This will carry err.response.data from the backend
     }
   }
 
   /**
    * Update an existing subcategory
+   *//**
+   * Update an existing subcategory
    */
   async updateSubcategory(data: UpdateSubcategoryData): Promise<Subcategory> {
     try {
       const { id, ...updateData } = data;
+      // You can add a console.log here to see what data is being sent for debugging
+      // console.log(`Attempting to update subcategory ${id} with data:`, updateData);
+
       const response = await apiClient.put(`${this.baseUrl}/${id}`, updateData, {
         headers: {
           "Content-Type": "application/json",
@@ -125,8 +131,10 @@ class SubcategoriesService {
       return response.data;
     } catch (error: any) {
       console.error(`Error updating subcategory ${data.id}:`, error);
-      const message = error.response?.data?.message || "Failed to update subcategory";
-      throw new Error(message);
+    
+      // This ensures the frontend receives the full 'error.response.data'
+      // including specific validation errors from your backend.
+      throw error; 
     }
   }
 

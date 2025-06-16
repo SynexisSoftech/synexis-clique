@@ -22,6 +22,9 @@ export default function EditSubcategoryPage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // State to hold field-specific validation errors
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const [categories, setCategories] = useState<ParentCategory[]>([]);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -39,6 +42,7 @@ export default function EditSubcategoryPage() {
     useEffect(() => {
         const fetchInitialData = async () => {
             setIsLoading(true);
+            setError(null); // Clear any previous errors on load
             try {
                 const catResponse = await categoriesService.getCategories({ status: "active" });
                 setCategories(catResponse.categories);
@@ -58,7 +62,8 @@ export default function EditSubcategoryPage() {
                     }
                 }
             } catch (err: any) {
-                setError(err.message || "Failed to load initial data.");
+                // Initial data fetch errors are general, so we set the main error state
+                setError(err.response?.data?.message || err.message || "Failed to load initial data.");
             } finally {
                 setIsLoading(false);
             }
@@ -93,15 +98,11 @@ export default function EditSubcategoryPage() {
         if(fileInput) fileInput.value = "";
     };
 
-    /**
-     * ✅ UPDATED LOGIC
-     * Handles form submission by conditionally setting the 'image' field
-     * to match the backend controller's expectation.
-     */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError(null);
+        setError(null); // Clear general error
+        setFieldErrors({}); // Clear field-specific errors
 
         if (!formData.categoryId) {
             setError("Please select a parent category.");
@@ -110,45 +111,66 @@ export default function EditSubcategoryPage() {
         }
 
         try {
-            // Start with text-based form data
             const submitData: UpdateSubcategoryData = {
                 id,
                 ...formData
             };
 
-            // --- CORRECTED IMAGE LOGIC ---
-            // 1. If a new file was chosen, send its base64 string.
             if (imageFile) {
-                submitData.image = imagePreview; // imagePreview already holds the base64 string
-            }
-            // 2. If the user clicked "remove", send null to clear the image.
-            else if (isRemovingImage) {
+                submitData.image = imagePreview;
+            } else if (isRemovingImage) {
                 submitData.image = null;
             }
-            // 3. Otherwise, don't send the `image` key at all, so the backend won't touch it.
+            // If neither, `submitData` will NOT have an `image` key,
+            // signaling the backend not to change the image.
 
             await subcategoriesService.updateSubcategory(submitData);
             
-            // Ensure the redirect path is correct for your app structure
             router.push("/admin/subcategories"); 
 
         } catch (err: any) {
             console.error("Error updating subcategory:", err);
-            setError(err.response?.data?.message || err.message || "Failed to update subcategory.");
+            
+            // --- UPDATED ERROR HANDLING LOGIC ---
+            if (err.response) {
+                const { message, errors } = err.response.data || {}; // Destructure message and errors
+                
+                if (err.response.status === 400 && errors) {
+                    // This is likely a validation error from the backend
+                    const newFieldErrors: Record<string, string> = {};
+                    for (const key in errors) {
+                        if (Object.prototype.hasOwnProperty.call(errors, key)) {
+                            // Assuming backend sends { fieldName: { message: "error message" } }
+                            newFieldErrors[key] = errors[key].message || `Invalid value for ${key}`;
+                        }
+                    }
+                    setFieldErrors(newFieldErrors);
+                    // Set a general error message for validation issues
+                    setError(message || "Please correct the highlighted errors.");
+                } else {
+                    // Other types of backend errors (e.g., 404, 500, or a general 400 without specific field errors)
+                    setError(message || `An error occurred: ${err.response.status}`);
+                }
+            } else if (err.request) {
+                // The request was made but no response was received (e.g., network error)
+                setError("Network error: Please check your internet connection.");
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                setError(`An unexpected error occurred: ${err.message || "Failed to update subcategory."}`);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (isLoading && !formData.title) return <div>Loading editor...</div>;
-    if (!id) return <div>Invalid subcategory ID.</div>;
+    if (isLoading && !formData.title) return <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">Loading editor...</div>;
+    if (!id) return <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">Invalid subcategory ID.</div>;
 
     return (
         <AdminRouteGuard>
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <Button variant="outline" size="icon" asChild className="w-fit">
-                        {/* Ensure this link points to your subcategories list */}
                         <Link href="/admin/subcategories">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
@@ -179,10 +201,13 @@ export default function EditSubcategoryPage() {
                                     <Label htmlFor="category" className="text-sm font-medium">Parent Category *</Label>
                                     <Select
                                         value={formData.categoryId}
-                                        onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
+                                        onValueChange={(value) => {
+                                            setFormData((prev) => ({ ...prev, categoryId: value }));
+                                            setFieldErrors((prev) => ({ ...prev, categoryId: undefined })); // Clear error on change
+                                        }}
                                         required
                                     >
-                                        <SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger>
+                                        <SelectTrigger className={fieldErrors.categoryId ? "border-red-500" : ""}><SelectValue placeholder="Select a category" /></SelectTrigger>
                                         <SelectContent>
                                             {categories.map((category) => (
                                                 <SelectItem key={category._id} value={category._id}>
@@ -191,6 +216,7 @@ export default function EditSubcategoryPage() {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    {fieldErrors.categoryId && <p className="text-red-500 text-xs mt-1">{fieldErrors.categoryId}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="title" className="text-sm font-medium">Subcategory Title *</Label>
@@ -198,20 +224,29 @@ export default function EditSubcategoryPage() {
                                         id="title"
                                         placeholder="Enter subcategory title"
                                         value={formData.title}
-                                        onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                                        onChange={(e) => {
+                                            setFormData((prev) => ({ ...prev, title: e.target.value }));
+                                            setFieldErrors((prev) => ({ ...prev, title: undefined })); // Clear error on change
+                                        }}
                                         required
+                                        className={fieldErrors.title ? "border-red-500" : ""}
                                     />
+                                    {fieldErrors.title && <p className="text-red-500 text-xs mt-1">{fieldErrors.title}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
                                     <Textarea
                                         id="description"
                                         placeholder="Enter subcategory description"
-                                        className="min-h-[80px] resize-none"
+                                        className={`min-h-[80px] resize-none ${fieldErrors.description ? "border-red-500" : ""}`}
                                         value={formData.description}
-                                        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                                        onChange={(e) => {
+                                            setFormData((prev) => ({ ...prev, description: e.target.value }));
+                                            setFieldErrors((prev) => ({ ...prev, description: undefined })); // Clear error on change
+                                        }}
                                         required
                                     />
+                                    {fieldErrors.description && <p className="text-red-500 text-xs mt-1">{fieldErrors.description}</p>}
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
