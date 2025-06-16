@@ -1,5 +1,3 @@
-// app/auth/forgot-password/page.tsx
-
 "use client"
 
 import type React from "react"
@@ -9,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { forgotPasswordRequest } from "../../../service/authApi" // Adjust path as needed
 import { useRouter } from "next/navigation"
+import { ArrowLeft, Mail, Send, CheckCircle, AlertCircle } from "lucide-react"
+import Link from "next/link"
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("")
@@ -29,8 +29,7 @@ export default function ForgotPasswordForm() {
 
       // --- Redirect to the reset password page ---
       // Pass the email as a query parameter so the reset form can pre-fill it.
-      router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
-
+      router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`)
     } catch (err: any) {
       const errorMessage = err.message || "Failed to send reset request. Please try again."
       setError(errorMessage)
@@ -41,58 +40,141 @@ export default function ForgotPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-      <div className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl mx-auto space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
-        <div className="text-center space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-          <div className="max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl xl:max-w-4xl mx-auto">
-            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold tracking-[0.05em] sm:tracking-[0.1em] text-gray-900 leading-tight mb-3 sm:mb-4 md:mb-5 lg:mb-6">
-              FORGOT PASSWORD?
-            </h1>
-            <p className="text-xs sm:text-xs md:text-sm lg:text-base xl:text-lg text-gray-600 leading-relaxed px-2 sm:px-4 md:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Back to Login Link */}
+      <Link
+        href="/auth/login"
+        className="fixed top-6 left-6 z-10 flex items-center gap-2 rounded-full bg-white/90 backdrop-blur-sm px-4 py-2 text-sm font-medium text-gray-700 shadow-lg transition-all duration-300 hover:bg-white hover:shadow-xl hover:scale-105"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span className="hidden sm:inline">Back to Login</span>
+      </Link>
+
+      <div className="flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#6F4E37] to-[#5d4230] mb-6 shadow-lg">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-4">Forgot Password?</h1>
+            <p className="text-gray-600 leading-relaxed max-w-sm mx-auto">
               Enter the email address associated with your account, and we'll email you an OTP to reset your password.
             </p>
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 md:space-y-10">
-          <div className="flex justify-center">
-            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl">
-              <Label htmlFor="email" className="sr-only">
+          {/* Messages */}
+          {error && (
+            <div className="mb-6 rounded-xl bg-red-50 border border-red-200 p-4 animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700 font-medium leading-relaxed">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mb-6 rounded-xl bg-green-50 border border-green-200 p-4 animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700 font-medium leading-relaxed">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-3">
                 Email Address
               </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full h-10 sm:h-12 md:h-14 lg:h-16 xl:h-[62px] px-0 py-3 sm:py-4 text-sm sm:text-base md:text-lg lg:text-xl border-0 border-b-2 border-gray-300 rounded-none bg-transparent focus:border-[#6F4E37] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-xs sm:placeholder:text-sm md:placeholder:text-base transition-colors"
-              />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-[#6F4E37] transition-colors duration-200" />
+                </div>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                  className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-center">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-          {successMessage && (
-            <div className="rounded-md bg-green-50 p-3 text-center">
-              <p className="text-sm text-green-600">{successMessage}</p>
-            </div>
-          )}
-
-          <div className="flex justify-center">
+            {/* Submit Button */}
             <Button
               type="submit"
               disabled={!email || isSubmitting}
-              className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl h-10 sm:h-12 md:h-14 lg:h-16 xl:h-[40px] bg-[#6F4E37] hover:bg-[#5d4230] disabled:opacity-50 text-white font-semibold rounded-[4px] sm:rounded-[6px] uppercase tracking-[0.05em] sm:tracking-[0.1em] text-xs sm:text-xs md:text-sm lg:text-sm transition-colors duration-200 shadow-none border-0 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"
+              className="w-full relative overflow-hidden rounded-xl bg-gradient-to-r from-[#6F4E37] to-[#5d4230] px-6 py-4 text-white font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-[#6F4E37]/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              {isSubmitting ? "SUBMITTING..." : "SUBMIT"}
+              <span className={`transition-opacity duration-200 ${isSubmitting ? "opacity-0" : "opacity-100"}`}>
+                <span className="flex items-center justify-center gap-2">
+                  <Send className="w-4 h-4" />
+                  Send Reset Code
+                </span>
+              </span>
+              {isSubmitting && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Sending...</span>
+                  </div>
+                </div>
+              )}
             </Button>
+
+            {/* Additional Links */}
+            <div className="text-center pt-6 border-t border-gray-100 space-y-4">
+              <p className="text-gray-600">
+                Remember your password?{" "}
+                <Link
+                  href="/auth/login"
+                  className="font-semibold text-[#6F4E37] hover:text-[#5d4230] transition-colors duration-200"
+                >
+                  Sign in
+                </Link>
+              </p>
+
+              <p className="text-gray-600">
+                {"Don't have an account? "}
+                <Link
+                  href="/auth/signup"
+                  className="font-semibold text-[#6F4E37] hover:text-[#5d4230] transition-colors duration-200"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          </form>
+
+          {/* Help Text */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="w-2 h-2 rounded-full bg-gray-400 mt-2" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  <strong>Having trouble?</strong> Make sure to check your spam folder for the reset email. The OTP code
+                  will expire in 15 minutes for security reasons.
+                </p>
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
