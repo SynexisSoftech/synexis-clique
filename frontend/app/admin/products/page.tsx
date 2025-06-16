@@ -34,12 +34,11 @@ export default function ProductsPage() {
     if (!category) return "N/A";
     return typeof category === "object" ? category.title : "Unknown";
   };
-  
+
   const getSubcategoryTitle = (subcategory: any): string => {
     if (!subcategory) return "N/A";
     return typeof subcategory === "object" ? subcategory.title : "Unknown";
   };
-
 
   const fetchData = async (currentPage: number = 1) => {
     setIsLoading(true);
@@ -120,7 +119,7 @@ export default function ProductsPage() {
           <p className="text-muted-foreground text-sm sm:text-base">Manage your product inventory. Total: {totalProducts}</p>
         </div>
         <Button asChild className="w-full sm:w-auto">
-          <Link href="/dashboard/products/add">
+          <Link href="/admin/add-product">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Link>
@@ -161,7 +160,7 @@ export default function ProductsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm">{product.categoryDisplay}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">${product.originalPrice.toFixed(2)}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{product.originalPrice.toFixed(2)}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">{product.stockQuantity}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(product.status)} className="text-xs">

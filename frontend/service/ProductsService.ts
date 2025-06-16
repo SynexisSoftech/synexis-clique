@@ -139,19 +139,38 @@ class ProductsService {
   /**
    * Create a new product.
    */
-  async createProduct(data: CreateProductData): Promise<Product> {
-    try {
-      const response = await apiClient.post(this.baseUrl, data, {
-        headers: { "Content-Type": "application/json" },
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error("Error creating product:", error);
-      const message = error.response?.data?.message || "Failed to create product";
-      throw new Error(message);
-    }
-  }
+async createProduct(data: CreateProductData): Promise<Product> {
+  try {
+    const response = await apiClient.post(this.baseUrl, data, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("Error creating product:", error.response?.data || error);
 
+    // Default error message
+    let errorMessage = "Failed to create product";
+
+    const errorResponseData = error.response?.data;
+
+    if (errorResponseData) {
+      // If there's a specific 'message' field, use it.
+      if (errorResponseData.message) {
+        errorMessage = errorResponseData.message;
+      }
+
+      // If there's an 'errors' object, format a more detailed message.
+      if (errorResponseData.errors && typeof errorResponseData.errors === 'object') {
+        const specificErrors = Object.values(errorResponseData.errors).flat().join(', ');
+        if (specificErrors) {
+          errorMessage = `${errorMessage}: ${specificErrors}`;
+        }
+      }
+    }
+
+    throw new Error(errorMessage);
+  }
+}
   /**
    * Update an existing product.
    */
