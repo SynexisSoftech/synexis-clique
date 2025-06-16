@@ -42,7 +42,7 @@ const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:2701
 const corsOptions = {
   origin: 'http://localhost:3000', // <-- IMPORTANT: Change to your Next.js URL
   credentials: true, // <-- IMPORTANT: Allow sending cookies (for refreshToken)
-   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+   methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Allowed HTTP methods
     allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
