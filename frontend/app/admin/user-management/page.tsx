@@ -20,6 +20,7 @@ import {
   Filter,
   Download,
   Eye,
+  WifiOff,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -36,7 +37,23 @@ import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { userService, type IUser, type UsersResponse, type UserRole } from "@/service/userService"
+
+// Enhanced error interface for better validation handling
+interface ValidationError {
+  field?: string
+  message: string
+  code?: string
+  value?: any
+}
+
+interface ApiError {
+  message: string
+  errors?: ValidationError[]
+  status?: number
+  timestamp?: string
+}
 
 // Get user initials safely
 const getUserInitials = (username: string | undefined | null) => {
@@ -51,7 +68,7 @@ const getUserInitials = (username: string | undefined | null) => {
     .slice(0, 2)
 }
 
-// Mobile User Card Component
+// Enhanced Mobile User Card Component with better error handling
 const MobileUserCard = ({
   user,
   index,
@@ -79,7 +96,7 @@ const MobileUserCard = ({
     <Card className="w-full hover:shadow-md transition-shadow overflow-hidden">
       <CardContent className="p-3 w-full">
         <div className="flex items-start gap-3 w-full min-w-0">
-          <Avatar className="h-10 w-10 flex-shrink-0">
+          <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
             <AvatarImage src={user.photoURL || "/placeholder.svg"} alt={user.username || "User"} />
             <AvatarFallback className="bg-rose-100 text-rose-700 text-sm">
               {getUserInitials(user.username)}
@@ -89,8 +106,8 @@ const MobileUserCard = ({
           <div className="flex-1 min-w-0 space-y-2 max-w-[calc(100%-100px)]">
             <div className="flex items-start justify-between gap-2 w-full">
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm truncate">{user.username || "Unknown User"}</h3>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <h3 className="font-semibold text-sm sm:text-base truncate">{user.username || "Unknown User"}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
 
@@ -218,12 +235,36 @@ const MobileUserCard = ({
   </motion.div>
 )
 
+// Loading skeleton component
+const LoadingSkeleton = () => (
+  <div className="space-y-3 w-full">
+    {[...Array(5)].map((_, i) => (
+      <Card key={i} className="w-full">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-full flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-8 flex-shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+)
+
 export default function AdminUsersManagementPage() {
   const { toast } = useToast()
   const [users, setUsers] = useState<IUser[]>([])
   const [filteredUsers, setFilteredUsers] = useState<IUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ApiError | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -232,8 +273,76 @@ export default function AdminUsersManagementPage() {
   const [isUpdatingUser, setIsUpdatingUser] = useState<string | null>(null)
   const [isChangingRole, setIsChangingRole] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [isOnline, setIsOnline] = useState(true)
 
-  // Fetch users from API
+  // Network status monitoring
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
+  // Enhanced error parsing function
+  const parseApiError = (err: any): ApiError => {
+    const apiError: ApiError = {
+      message: err.message || "An unexpected error occurred",
+      errors: [],
+      status: err.status || err.response?.status || 500,
+      timestamp: new Date().toISOString(),
+    }
+
+    // Parse validation errors from different response formats
+    if (err.response?.data?.errors) {
+      apiError.errors = err.response.data.errors
+    } else if (err.errors) {
+      apiError.errors = err.errors
+    } else if (err.response?.data?.message) {
+      apiError.message = err.response.data.message
+    }
+
+    return apiError
+  }
+
+  // Enhanced error display function
+  const displayValidationErrors = (apiError: ApiError, title = "Error") => {
+    // Show main error message
+    toast({
+      title,
+      description: apiError.message,
+      variant: "destructive",
+    })
+
+    // Show individual validation errors
+    if (apiError.errors && apiError.errors.length > 0) {
+      apiError.errors.forEach((error: ValidationError, index) => {
+        setTimeout(() => {
+          toast({
+            title: `Validation Error${error.field ? ` (${error.field})` : ""}`,
+            description: error.message,
+            variant: "destructive",
+          })
+        }, index * 500) // Stagger error messages
+      })
+    }
+
+    // Show network-specific errors
+    if (apiError.status === 0 || !isOnline) {
+      toast({
+        title: "Network Error",
+        description: "Please check your internet connection and try again",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Fetch users from API with enhanced error handling
   const fetchUsers = async (refresh = false) => {
     try {
       if (refresh) {
@@ -248,12 +357,9 @@ export default function AdminUsersManagementPage() {
       setFilteredUsers(response.users)
     } catch (err: any) {
       console.error("Error fetching users:", err)
-      setError(err.message || "Failed to load users")
-      toast({
-        title: "Error",
-        description: err.message || "Failed to load users",
-        variant: "destructive",
-      })
+      const apiError = parseApiError(err)
+      setError(apiError)
+      displayValidationErrors(apiError, "Failed to Load Users")
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -297,7 +403,7 @@ export default function AdminUsersManagementPage() {
     setFilteredUsers(filtered)
   }, [users, searchTerm, roleFilter, statusFilter])
 
-  // Toggle user block status
+  // Enhanced toggle user block status with better error handling
   const handleToggleBlockStatus = async (userId: string, currentStatus: boolean) => {
     const action = currentStatus ? "unblock" : "block"
     const confirmMessage = `Are you sure you want to ${action} this user?`
@@ -323,17 +429,14 @@ export default function AdminUsersManagementPage() {
       })
     } catch (err: any) {
       console.error(`Error ${action}ing user:`, err)
-      toast({
-        title: "Error",
-        description: err.message || `Failed to ${action} user`,
-        variant: "destructive",
-      })
+      const apiError = parseApiError(err)
+      displayValidationErrors(apiError, `Failed to ${action} user`)
     } finally {
       setIsUpdatingUser(null)
     }
   }
 
-  // Change user role
+  // Enhanced change user role with better error handling
   const handleChangeUserRole = async (userId: string, newRole: UserRole) => {
     const confirmMessage = `Are you sure you want to change this user's role to ${newRole}?`
 
@@ -358,44 +461,49 @@ export default function AdminUsersManagementPage() {
       })
     } catch (err: any) {
       console.error(`Error changing user role:`, err)
-      toast({
-        title: "Error",
-        description: err.message || `Failed to change user role`,
-        variant: "destructive",
-      })
+      const apiError = parseApiError(err)
+      displayValidationErrors(apiError, "Failed to change user role")
     } finally {
       setIsChangingRole(null)
     }
   }
 
   const handleExportUsers = () => {
-    const csvContent = [
-      ["ID", "Username", "Email", "Role", "Status", "Verified", "Created At"].join(","),
-      ...filteredUsers.map((user) =>
-        [
-          user._id,
-          user.username || "Unknown",
-          user.email || "No email",
-          user.role,
-          user.isBlocked ? "Blocked" : "Active",
-          user.isVerified ? "Verified" : "Not Verified",
-          new Date(user.createdAt).toLocaleDateString(),
-        ].join(","),
-      ),
-    ].join("\n")
+    try {
+      const csvContent = [
+        ["ID", "Username", "Email", "Role", "Status", "Verified", "Created At"].join(","),
+        ...filteredUsers.map((user) =>
+          [
+            user._id,
+            user.username || "Unknown",
+            user.email || "No email",
+            user.role,
+            user.isBlocked ? "Blocked" : "Active",
+            user.isVerified ? "Verified" : "Not Verified",
+            new Date(user.createdAt).toLocaleDateString(),
+          ].join(","),
+        ),
+      ].join("\n")
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+      const blob = new Blob([csvContent], { type: "text/csv" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
 
-    toast({
-      title: "Export Complete",
-      description: "Users data has been exported successfully",
-    })
+      toast({
+        title: "Export Complete",
+        description: "Users data has been exported successfully",
+      })
+    } catch (err) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export users data",
+        variant: "destructive",
+      })
+    }
   }
 
   // Format date
@@ -422,6 +530,14 @@ export default function AdminUsersManagementPage() {
     <div className="w-full min-h-screen overflow-x-hidden">
       <div className="w-full max-w-full">
         <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6 w-full max-w-full">
+          {/* Network Status Indicator */}
+          {!isOnline && (
+            <Alert variant="destructive" className="w-full">
+              <WifiOff className="h-4 w-4" />
+              <AlertDescription>You're currently offline. Some features may not work properly.</AlertDescription>
+            </Alert>
+          )}
+
           {/* Mobile Header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-full">
             {/* Title and Actions */}
@@ -431,12 +547,20 @@ export default function AdminUsersManagementPage() {
                   <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-rose-500 flex-shrink-0" />
                   <span className="truncate min-w-0">User Management</span>
                 </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">Manage and monitor users</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
+                  Manage and monitor users
+                  {!isOnline && (
+                    <span className="inline-flex items-center gap-1 ml-2">
+                      <WifiOff className="h-3 w-3" />
+                      Offline
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="flex gap-1 flex-shrink-0 w-auto">
                 <Button
                   onClick={() => fetchUsers(true)}
-                  disabled={isRefreshing}
+                  disabled={isRefreshing || !isOnline}
                   variant="outline"
                   size="sm"
                   className="border-rose-200 text-rose-600 hover:bg-rose-50 px-2 min-w-0"
@@ -577,13 +701,31 @@ export default function AdminUsersManagementPage() {
             </div>
           </motion.div>
 
-          {/* Error Message */}
+          {/* Enhanced Error Message */}
           <AnimatePresence>
             {error && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="w-full">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="font-medium">{error.message}</p>
+                      {error.status && <p className="text-xs mt-1 opacity-80">Status: {error.status}</p>}
+                      {error.errors && error.errors.length > 0 && (
+                        <p className="text-xs mt-1 opacity-80">{error.errors.length} validation error(s) detected</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchUsers(true)}
+                      className="w-full sm:w-auto flex-shrink-0"
+                      disabled={!isOnline}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Retry
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               </motion.div>
             )}
@@ -602,25 +744,31 @@ export default function AdminUsersManagementPage() {
                   <div className="min-w-0 flex-1">
                     <CardTitle className="text-lg truncate">Users List</CardTitle>
                     <CardDescription className="truncate">
-                      Showing {filteredUsers.length} of {users.length} users
+                      {isLoading ? "Loading..." : `Showing ${filteredUsers.length} of ${users.length} users`}
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 w-full">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                      <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
-                      <p className="text-muted-foreground">Loading users...</p>
-                    </div>
-                  </div>
+                  <LoadingSkeleton />
                 ) : filteredUsers.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      {users.length === 0 ? "No users found" : "No users match your current filters"}
+                    <h3 className="text-lg font-semibold mb-2">
+                      {users.length === 0 ? "No users found" : "No users match your filters"}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {users.length === 0
+                        ? "Users will appear here once they register"
+                        : "Try adjusting your search or filter criteria"}
                     </p>
+                    {users.length === 0 && (
+                      <Button onClick={() => fetchUsers(true)} disabled={!isOnline}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Refresh
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3 w-full">
@@ -644,7 +792,7 @@ export default function AdminUsersManagementPage() {
             </Card>
           </motion.div>
 
-          {/* User Details Dialog - Mobile Responsive */}
+          {/* Enhanced User Details Dialog - Mobile Responsive */}
           <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
             <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto mx-auto overflow-x-hidden">
               <DialogHeader>
@@ -654,19 +802,21 @@ export default function AdminUsersManagementPage() {
               {selectedUser && (
                 <div className="space-y-4 w-full max-w-full overflow-hidden">
                   <div className="flex items-center gap-3 w-full">
-                    <Avatar className="h-12 w-12 flex-shrink-0">
+                    <Avatar className="h-12 w-12 sm:h-16 sm:w-16 flex-shrink-0">
                       <AvatarImage
                         src={selectedUser.photoURL || "/placeholder.svg"}
                         alt={selectedUser.username || "User"}
                       />
-                      <AvatarFallback className="bg-rose-100 text-rose-700">
+                      <AvatarFallback className="bg-rose-100 text-rose-700 text-lg">
                         {getUserInitials(selectedUser.username)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-semibold truncate">{selectedUser.username || "Unknown User"}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold truncate">
+                        {selectedUser.username || "Unknown User"}
+                      </h3>
                       <p className="text-sm text-muted-foreground truncate">{selectedUser.email}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant={selectedUser.isVerified ? "default" : "secondary"} className="text-xs">
                           {selectedUser.isVerified ? "Verified" : "Not Verified"}
                         </Badge>
@@ -679,7 +829,7 @@ export default function AdminUsersManagementPage() {
                       <label className="text-xs font-medium text-muted-foreground">User ID</label>
                       <p className="text-xs font-mono bg-slate-100 p-2 rounded break-all">{selectedUser._id}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium text-muted-foreground">Role</label>
                         <div className="mt-1">
@@ -731,9 +881,15 @@ export default function AdminUsersManagementPage() {
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">Created At</label>
-                      <p className="text-xs truncate">{formatDate(selectedUser.createdAt)}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Created At</label>
+                        <p className="text-xs truncate">{formatDate(selectedUser.createdAt)}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Updated At</label>
+                        <p className="text-xs truncate">{formatDate(selectedUser.updatedAt)}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -742,7 +898,7 @@ export default function AdminUsersManagementPage() {
                       {selectedUser.role !== "admin" && (
                         <Button
                           onClick={() => handleChangeUserRole(selectedUser._id, "admin")}
-                          disabled={isChangingRole === selectedUser._id}
+                          disabled={isChangingRole === selectedUser._id || !isOnline}
                           variant="outline"
                           size="sm"
                           className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-1 min-w-0"
@@ -752,7 +908,7 @@ export default function AdminUsersManagementPage() {
                           ) : (
                             <>
                               <Shield className="h-4 w-4 mr-1" />
-                              <span className="truncate">Admin</span>
+                              <span className="truncate">Make Admin</span>
                             </>
                           )}
                         </Button>
@@ -761,7 +917,7 @@ export default function AdminUsersManagementPage() {
                       {selectedUser.role !== "buyer" && (
                         <Button
                           onClick={() => handleChangeUserRole(selectedUser._id, "buyer")}
-                          disabled={isChangingRole === selectedUser._id}
+                          disabled={isChangingRole === selectedUser._id || !isOnline}
                           variant="outline"
                           size="sm"
                           className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-1 min-w-0"
@@ -771,7 +927,7 @@ export default function AdminUsersManagementPage() {
                           ) : (
                             <>
                               <Users className="h-4 w-4 mr-1" />
-                              <span className="truncate">Buyer</span>
+                              <span className="truncate">Make Buyer</span>
                             </>
                           )}
                         </Button>
@@ -781,7 +937,7 @@ export default function AdminUsersManagementPage() {
                     <div className="flex gap-2 w-full">
                       <Button
                         onClick={() => handleToggleBlockStatus(selectedUser._id, selectedUser.isBlocked)}
-                        disabled={isUpdatingUser === selectedUser._id}
+                        disabled={isUpdatingUser === selectedUser._id || !isOnline}
                         variant={selectedUser.isBlocked ? "default" : "destructive"}
                         size="sm"
                         className="flex-1 min-w-0"
@@ -791,12 +947,12 @@ export default function AdminUsersManagementPage() {
                         ) : selectedUser.isBlocked ? (
                           <>
                             <ShieldOff className="h-4 w-4 mr-1" />
-                            <span className="truncate">Unblock</span>
+                            <span className="truncate">Unblock User</span>
                           </>
                         ) : (
                           <>
                             <UserX className="h-4 w-4 mr-1" />
-                            <span className="truncate">Block</span>
+                            <span className="truncate">Block User</span>
                           </>
                         )}
                       </Button>
