@@ -37,21 +37,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { userService, type UsersResponse } from "../../../service/userService"
-
+import { userService, type IUser, type UsersResponse, type UserRole } from "../../../service/userService"
 // Update the import and interface to match your model
 // Update the interface to match your actual model
-interface IUser {
-  _id: string
-  username: string // Changed from 'name' to 'username'
-  email: string
-  photoURL: string
-  isVerified: boolean
-  role: "buyer" | "admin" // Updated role values
-  isBlocked: boolean
-  createdAt: string
-  updatedAt: string
-}
 
 // Get user initials safely
 const getUserInitials = (username: string | undefined | null) => {
@@ -78,6 +66,7 @@ export default function AdminUsersManagementPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedUser, setSelectedUser] = useState<IUser | null>(null)
   const [isUpdatingUser, setIsUpdatingUser] = useState<string | null>(null)
+  const [isChangingRole, setIsChangingRole] = useState<string | null>(null)
 
   // Fetch users from API
   const fetchUsers = async (refresh = false) => {
@@ -177,6 +166,42 @@ export default function AdminUsersManagementPage() {
       })
     } finally {
       setIsUpdatingUser(null)
+    }
+  }
+
+  // Change user role
+  const handleChangeUserRole = async (userId: string, newRole: UserRole) => {
+    const confirmMessage = `Are you sure you want to change this user's role to ${newRole}?`
+
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      setIsChangingRole(userId)
+
+      const updatedUser = await userService.changeUserRole(userId, {
+        role: newRole,
+      })
+
+      // Update the user in the local state
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => (user._id === userId ? { ...user, role: updatedUser.role } : user)),
+      )
+
+      toast({
+        title: "Success",
+        description: `User role has been changed to ${updatedUser.role} successfully`,
+      })
+    } catch (err: any) {
+      console.error(`Error changing user role:`, err)
+      toast({
+        title: "Error",
+        description: err.message || `Failed to change user role`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsChangingRole(null)
     }
   }
 
@@ -517,6 +542,40 @@ export default function AdminUsersManagementPage() {
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+
+                                {/* Role Change Options */}
+                                {user.role !== "admin" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleChangeUserRole(user._id, "admin")}
+                                    disabled={isChangingRole === user._id}
+                                    className="text-purple-600"
+                                  >
+                                    {isChangingRole === user._id ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Shield className="mr-2 h-4 w-4" />
+                                    )}
+                                    Make Admin
+                                  </DropdownMenuItem>
+                                )}
+
+                                {user.role !== "buyer" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleChangeUserRole(user._id, "buyer")}
+                                    disabled={isChangingRole === user._id}
+                                    className="text-blue-600"
+                                  >
+                                    {isChangingRole === user._id ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Users className="mr-2 h-4 w-4" />
+                                    )}
+                                    Make Buyer
+                                  </DropdownMenuItem>
+                                )}
+
+                                <DropdownMenuSeparator />
+
                                 <DropdownMenuItem
                                   onClick={() => handleToggleBlockStatus(user._id, user.isBlocked)}
                                   disabled={isUpdatingUser === user._id}
@@ -649,6 +708,39 @@ export default function AdminUsersManagementPage() {
               </div>
 
               <div className="flex gap-2 pt-4">
+                {/* Role Change Buttons */}
+                {selectedUser.role !== "admin" && (
+                  <Button
+                    onClick={() => handleChangeUserRole(selectedUser._id, "admin")}
+                    disabled={isChangingRole === selectedUser._id}
+                    variant="outline"
+                    className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                  >
+                    {isChangingRole === selectedUser._id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Shield className="mr-2 h-4 w-4" />
+                    )}
+                    Make Admin
+                  </Button>
+                )}
+
+                {selectedUser.role !== "buyer" && (
+                  <Button
+                    onClick={() => handleChangeUserRole(selectedUser._id, "buyer")}
+                    disabled={isChangingRole === selectedUser._id}
+                    variant="outline"
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                  >
+                    {isChangingRole === selectedUser._id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Users className="mr-2 h-4 w-4" />
+                    )}
+                    Make Buyer
+                  </Button>
+                )}
+
                 <Button
                   onClick={() => handleToggleBlockStatus(selectedUser._id, selectedUser.isBlocked)}
                   disabled={isUpdatingUser === selectedUser._id}
@@ -664,6 +756,7 @@ export default function AdminUsersManagementPage() {
                   )}
                   {selectedUser.isBlocked ? "Unblock User" : "Block User"}
                 </Button>
+
                 <Button variant="outline" onClick={() => setSelectedUser(null)}>
                   Close
                 </Button>
