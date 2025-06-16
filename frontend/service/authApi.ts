@@ -71,3 +71,14 @@ export const resendForgotPasswordOtpRequest = async (email: string) => {
   }
 };
 
+export const getAuthenticatedUser = async () => {
+ try {
+ // The GET request to the protected /me route.
+// axiosInstance should automatically include the auth token if configured correctly.
+ const response = await axiosInstance.get('/api/auth/me');
+return response.data; // This will return { message: '...', user: { ... } }
+ } catch (error: any) {
+ // This will handle errors like an expired token (401/403)
+throw error.response?.data || error.message;
+}
+};

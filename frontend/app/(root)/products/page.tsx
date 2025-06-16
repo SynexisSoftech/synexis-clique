@@ -43,34 +43,43 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { productsService, type Product } from "../../../service/ProductsService"
+import ProductService, { type ProductDetails } from "../../../service/public/Productservice"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
 
 // Helper function to map API product to UI product
-const mapApiProductToUiProduct = (product: Product) => {
+const mapApiProductToUiProduct = (product: ProductDetails) => {
+  const finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : product.originalPrice
+  const discountPercentage =
+    product.discountPrice && product.discountPrice > 0
+      ? Math.round(((product.originalPrice - product.discountPrice) / product.originalPrice) * 100)
+      : 0
+
   return {
-    id: product._id, // Keep as string to avoid ID format issues
+    id: product._id,
     name: product.title,
     description: product.description,
-    price: product.price || 0,
+    price: finalPrice,
+    originalPrice: product.originalPrice,
+    discountPrice: product.discountPrice || 0,
+    finalPrice: finalPrice,
     image: product.images && product.images.length > 0 ? product.images[0] : "/placeholder.svg?height=400&width=400",
     category: typeof product.categoryId === "object" ? product.categoryId.title : "Unknown",
-    featured: product.isFeatured || false,
+    featured: product.status === "active",
     color: product.colors && product.colors.length > 0 ? product.colors[0] : "Blue",
-    gender: "Unisex", // Default value, adjust based on your data model
-    sizes: product.sizes || ["38", "39", "40", "41", "42", "43"], // Use actual sizes if available
+    sizes: product.sizes || ["38", "39", "40", "41", "42", "43"],
     brand: product.brand || "Unknown",
     rating: product.rating || 4.5,
     reviews: product.reviewsCount || 10,
-    discount: product.discountPrice
-      ? Math.round(((product.originalPrice - product.discountPrice) / product.originalPrice) * 100)
-      : 0,
-    isNew: new Date(product.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000, // New if created in last 7 days
+    discount: discountPercentage,
+    isNew: new Date(product.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
     images: product.images || ["/placeholder.svg?height=400&width=400"],
-    stock: product.stockQuantity || 0,
+    stock: product.stockQuantity,
+    stockQuantity: product.stockQuantity,
     colors: product.colors || [],
+    status: product.status,
+    isCashOnDeliveryAvailable: product.isCashOnDeliveryAvailable,
   }
 }
 
@@ -84,7 +93,7 @@ export default function ProductsPage() {
   const [isFiltering, setIsFiltering] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [apiProducts, setApiProducts] = useState<Product[]>([])
+  const [apiProducts, setApiProducts] = useState<ProductDetails[]>([])
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [filteredProducts, setFilteredProducts] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -95,11 +104,10 @@ export default function ProductsPage() {
   const [filters, setFilters] = useState({
     category: [],
     color: [],
-    gender: [],
     brand: [],
     size: [],
   })
-  const [sortOption, setSortOption] = useState("featured")
+  const [sortOption, setSortOption] = useState("newest")
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFiltersCount, setActiveFiltersCount] = useState(0)
 
@@ -110,16 +118,17 @@ export default function ProductsPage() {
   const [availableSizes, setAvailableSizes] = useState<string[]>([])
   const [minMaxPrice, setMinMaxPrice] = useState<[number, number]>([0, 20000])
 
-  // Fetch all products once
+  // Fetch all products
   useEffect(() => {
     const fetchAllProducts = async () => {
       try {
         setLoading(true)
+        setError(null)
 
-        // Fetch all products with a large limit
-        const response = await productsService.getProducts({
-          limit: 100, // Adjust based on your needs
-          status: "active",
+        // Fetch products using the ProductService
+        const response = await ProductService.getAllProducts({
+          limit: 100,
+          sort: "newest",
         })
 
         setApiProducts(response.products)
@@ -148,6 +157,7 @@ export default function ProductsPage() {
         setMinMaxPrice([minPrice, maxPrice])
         setPriceRange([minPrice, maxPrice])
       } catch (err: any) {
+        console.error("Error fetching products:", err)
         setError(err.message || "Failed to fetch products")
         toast({
           title: "Error",
@@ -217,19 +227,21 @@ export default function ProductsPage() {
 
     // Apply sorting
     switch (sortOption) {
-      case "price-low":
+      case "price-asc":
         result.sort((a, b) => a.price - b.price)
         break
-      case "price-high":
+      case "price-desc":
         result.sort((a, b) => b.price - a.price)
         break
       case "newest":
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        result.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
         break
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating)
+      case "popular":
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0))
         break
-      case "featured":
+      case "name":
+        result.sort((a, b) => a.name.localeCompare(b.name))
+        break
       default:
         result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
         break
@@ -238,7 +250,7 @@ export default function ProductsPage() {
     setFilteredProducts(result)
     setTotalCount(result.length)
     setTotalPages(Math.ceil(result.length / itemsPerPage))
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
 
     setTimeout(() => {
       setIsFiltering(false)
@@ -268,7 +280,6 @@ export default function ProductsPage() {
     setFilters({
       category: [],
       color: [],
-      gender: [],
       brand: [],
       size: [],
     })
@@ -505,7 +516,6 @@ export default function ProductsPage() {
                       Green: "#2ECC40",
                       Grey: "#AAAAAA",
                       White: "#FFFFFF",
-                      // Add more colors as needed
                     }
 
                     const bgColor = colorMap[color] || "#CCCCCC"
@@ -614,11 +624,11 @@ export default function ProductsPage() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
                     <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="popular">Most Popular</SelectItem>
+                    <SelectItem value="name">Name A-Z</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -868,19 +878,14 @@ export default function ProductsPage() {
                                   {product.discount > 0 ? (
                                     <div className="flex items-center gap-2">
                                       <p className="font-semibold text-rose-600">
-                                        NPR{" "}
-                                        {Math.round(
-                                          (product.price || 0) * (1 - (product.discount || 0) / 100),
-                                        ).toLocaleString()}
+                                        NPR {product.finalPrice.toLocaleString()}
                                       </p>
                                       <p className="text-sm text-slate-500 line-through">
-                                        NPR {(product.price || 0).toLocaleString()}
+                                        NPR {product.originalPrice.toLocaleString()}
                                       </p>
                                     </div>
                                   ) : (
-                                    <p className="font-semibold text-rose-600">
-                                      NPR {(product.price || 0).toLocaleString()}
-                                    </p>
+                                    <p className="font-semibold text-rose-600">NPR {product.price.toLocaleString()}</p>
                                   )}
                                   <span className="text-xs text-slate-500">{product.brand}</span>
                                 </div>
@@ -891,15 +896,27 @@ export default function ProductsPage() {
                                     Only {product.stock} left in stock
                                   </div>
                                 )}
+
+                                {/* Cash on Delivery */}
+                                {product.isCashOnDeliveryAvailable && (
+                                  <div className="mt-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                    >
+                                      💰 Cash on Delivery
+                                    </Badge>
+                                  </div>
+                                )}
                               </CardContent>
                               <CardFooter className="p-4 pt-0">
                                 <Button
                                   className="w-full bg-rose-600 hover:bg-rose-700 transition-colors"
                                   onClick={() => handleAddToCart(product)}
-                                  disabled={product.stock <= 0}
+                                  disabled={product.stock <= 0 || product.status !== "active"}
                                 >
                                   <ShoppingCart className="mr-2 h-4 w-4" />
-                                  {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                                  {product.stock > 0 && product.status === "active" ? "Add to Cart" : "Out of Stock"}
                                 </Button>
                               </CardFooter>
                             </Card>
@@ -1032,22 +1049,31 @@ export default function ProductsPage() {
                                   </div>
                                 )}
 
+                                {/* Cash on Delivery */}
+                                {product.isCashOnDeliveryAvailable && (
+                                  <div className="mt-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                    >
+                                      💰 Cash on Delivery Available
+                                    </Badge>
+                                  </div>
+                                )}
+
                                 <div className="flex items-center justify-between mt-4">
                                   {product.discount > 0 ? (
                                     <div className="flex items-center gap-2">
                                       <p className="font-semibold text-rose-600 text-lg">
-                                        NPR{" "}
-                                        {Math.round(
-                                          (product.price || 0) * (1 - (product.discount || 0) / 100),
-                                        ).toLocaleString()}
+                                        NPR {product.finalPrice.toLocaleString()}
                                       </p>
                                       <p className="text-sm text-slate-500 line-through">
-                                        NPR {(product.price || 0).toLocaleString()}
+                                        NPR {product.originalPrice.toLocaleString()}
                                       </p>
                                     </div>
                                   ) : (
                                     <p className="font-semibold text-rose-600 text-lg">
-                                      NPR {(product.price || 0).toLocaleString()}
+                                      NPR {product.price.toLocaleString()}
                                     </p>
                                   )}
                                   <div className="flex gap-2">
@@ -1064,10 +1090,12 @@ export default function ProductsPage() {
                                       size="sm"
                                       className="bg-rose-600 hover:bg-rose-700"
                                       onClick={() => handleAddToCart(product)}
-                                      disabled={product.stock <= 0}
+                                      disabled={product.stock <= 0 || product.status !== "active"}
                                     >
                                       <ShoppingCart className="h-4 w-4 mr-1" />
-                                      {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                                      {product.stock > 0 && product.status === "active"
+                                        ? "Add to Cart"
+                                        : "Out of Stock"}
                                     </Button>
                                   </div>
                                 </div>
@@ -1277,20 +1305,15 @@ export default function ProductsPage() {
                   {quickViewProduct.discount > 0 ? (
                     <div className="flex items-center gap-2">
                       <p className="text-2xl font-bold text-rose-600">
-                        NPR{" "}
-                        {Math.round(
-                          (quickViewProduct.price || 0) * (1 - (quickViewProduct.discount || 0) / 100),
-                        ).toLocaleString()}
+                        NPR {quickViewProduct.finalPrice.toLocaleString()}
                       </p>
                       <p className="text-slate-500 line-through">
-                        NPR {(quickViewProduct.price || 0).toLocaleString()}
+                        NPR {quickViewProduct.originalPrice.toLocaleString()}
                       </p>
                       <Badge className="bg-rose-600 hover:bg-rose-700 ml-2">{quickViewProduct.discount}% OFF</Badge>
                     </div>
                   ) : (
-                    <p className="text-2xl font-bold text-rose-600">
-                      NPR {(quickViewProduct.price || 0).toLocaleString()}
-                    </p>
+                    <p className="text-2xl font-bold text-rose-600">NPR {quickViewProduct.price.toLocaleString()}</p>
                   )}
 
                   {/* Color options */}
@@ -1369,10 +1392,12 @@ export default function ProductsPage() {
                           addToCart(quickViewProduct, quickViewSize, quickViewQuantity)
                           setQuickViewProduct(null)
                         }}
-                        disabled={quickViewProduct.stock <= 0}
+                        disabled={quickViewProduct.stock <= 0 || quickViewProduct.status !== "active"}
                       >
                         <ShoppingCart className="mr-2 h-4 w-4" />
-                        {quickViewProduct.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                        {quickViewProduct.stock > 0 && quickViewProduct.status === "active"
+                          ? "Add to Cart"
+                          : "Out of Stock"}
                       </Button>
                       <Button variant="outline" className="border-rose-200 text-rose-600 hover:bg-rose-50">
                         <Heart className="mr-2 h-4 w-4" />
@@ -1395,6 +1420,12 @@ export default function ProductsPage() {
                         {quickViewProduct.stock > 0 ? `In Stock (${quickViewProduct.stock} available)` : "Out of Stock"}
                       </span>
                     </div>
+                    {quickViewProduct.isCashOnDeliveryAvailable && (
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-slate-600">Cash on Delivery:</span>
+                        <span className="font-medium text-green-600">Available</span>
+                      </div>
+                    )}
                   </div>
                   <div className="pt-4">
                     <Button variant="link" className="p-0 h-auto text-rose-600 hover:text-rose-700" asChild>

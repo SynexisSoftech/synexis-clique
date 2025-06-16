@@ -23,6 +23,7 @@ import adminOrderRoutes from './routes/admin/order.routes';
 import userOrderRoutes from './routes/public/order.routes';
 import publicCartRoutes from './routes/public/cart.route'; // Adjust path if needed
 import adminCartRoutes from './routes/admin/cart.route'; 
+import userRoutes from './routes/admin/user.routes';
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.use('/api/admin/carts', adminCartRoutes);
 
 // ... app.use('/api/products', publicProductRoutes);
 app.use('/api/orders', userOrderRoutes); // <-- AND ADD THIS
+app.use('/api/admin', userRoutes);
 setupSwagger(app); // ✅ Mount Swagger UI at /api-docs
 
 app.get('/', (req: Request, res: Response) => {

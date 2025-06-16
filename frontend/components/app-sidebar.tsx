@@ -102,8 +102,8 @@ const data = {
     },
 
     {
-      title: "Users",
-      url: "/admin/users",
+      title: "Users management",
+      url: "/admin//user-management",
       icon: Users,
       isActive: false,
     },
@@ -150,6 +150,12 @@ const data = {
       icon: Settings,
       isActive: false,
     },
+    //  {
+    //   title: "user management",
+    //   url: "/admin/user-management",
+    //   icon: Settings,
+    //   isActive: false,
+    // },
   ],
 }
 

@@ -18,66 +18,15 @@ import { useToast } from "@/hooks/use-toast"
 import { Progress } from "@/components/ui/progress"
 import { Slider } from "@/components/ui/slider"
 import { motion } from "framer-motion"
-import { productsService } from "../../../../service/ProductsService"
+import ProductService, { type ProductDetails } from "../../../../service/public/Productservice"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Navbar from "../../components/navbar/navbar"
 import Footer from "../../components/footer/footer"
-import {AddToCartButton} from "@/components/AddToCartButton"
+import { AddToCartButton } from "@/components/AddToCartButton"
 import { useCart } from "@/hooks/useCart"
 
-// Add proper TypeScript interfaces
-interface ICategory {
-  _id: string
-  title: string
-}
-
-interface ISubcategory {
-  _id: string
-  title: string
-}
-
-interface IDimensions {
-  length: number
-  width: number
-  height: number
-  unit?: string
-}
-
-interface ICustomDetail {
-  label: string
-  value: string
-}
-
-// Update the Product interface to match your model
-interface Product {
-  _id: string
-  title: string
-  description: string
-  shortDescription?: string
-  categoryId: string | ICategory
-  subcategoryId: string | ISubcategory
-  originalPrice: number
-  discountPrice?: number
-  stockQuantity: number
-  features?: string[]
-  colors?: string[]
-  sizes?: string[]
-  brand?: string
-  tags?: string[]
-  returnPolicy?: string
-  warranty?: string
-  weight?: string
-  dimensions?: IDimensions
-  material?: string
-  images: string[]
-  customDetails?: ICustomDetail[]
-  status: "active" | "inactive" | "out-of-stock"
-  isCashOnDeliveryAvailable: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-const mapApiProductToUiProduct = (product: Product) => {
+// Helper function to map API product to UI product
+const mapApiProductToUiProduct = (product: ProductDetails) => {
   // Calculate final price
   const finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : product.originalPrice
 
@@ -114,27 +63,13 @@ const mapApiProductToUiProduct = (product: Product) => {
     availableSizes: product.sizes || [],
     features: product.features || [],
     brand: product.brand || "Unknown",
-    material: product.material || "Not specified",
-    weight: product.weight || "Not specified",
-    dimensions: product.dimensions
-      ? {
-          length: product.dimensions.length,
-          width: product.dimensions.width,
-          height: product.dimensions.height,
-          unit: product.dimensions.unit || "cm",
-        }
-      : null,
-    returnPolicy: product.returnPolicy || "Standard return policy applies",
-    warranty: product.warranty || "Standard warranty applies",
-    tags: product.tags || [],
-    customDetails: product.customDetails || [],
     isCashOnDeliveryAvailable: product.isCashOnDeliveryAvailable,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
     // Default values for UI
-    rating: 4.5, // You might want to calculate this from reviews
-    reviews: 24, // You might want to get this from a reviews collection
-    stock: product.stockQuantity, // Add this for compatibility
+    rating: product.rating || 4.5,
+    reviews: product.reviewsCount || 24,
+    stock: product.stockQuantity,
   }
 }
 
@@ -187,10 +122,10 @@ export default function ProductPage({ params }: ProductPageProps) {
 
       try {
         setLoading(true)
-        setError(null) // Reset error state
+        setError(null)
 
-        // Use the slug parameter directly - it could be either a string ID or a slug
-        const apiProduct = await productsService.getProductById(slug)
+        // Use ProductService to fetch the product
+        const apiProduct = await ProductService.getProductById(slug)
         const mappedProduct = mapApiProductToUiProduct(apiProduct)
         setProduct(mappedProduct)
 
@@ -202,23 +137,14 @@ export default function ProductPage({ params }: ProductPageProps) {
           setSelectedColor(mappedProduct.availableColors[0])
         }
 
-        // Fetch related products (same category)
-        if (typeof apiProduct.categoryId === "string") {
-          try {
-            const relatedResponse = await productsService.getProducts({
-              categoryId: apiProduct.categoryId,
-              status: "active",
-              limit: 4,
-            })
-            const mappedRelated = relatedResponse.products
-              .filter((p) => p._id !== apiProduct._id)
-              .slice(0, 3)
-              .map(mapApiProductToUiProduct)
-            setRelatedProducts(mappedRelated)
-          } catch (relatedError) {
-            console.warn("Failed to fetch related products:", relatedError)
-            setRelatedProducts([])
-          }
+        // Fetch related products using ProductService
+        try {
+          const relatedResponse = await ProductService.getRelatedProducts(apiProduct._id, 3)
+          const mappedRelated = relatedResponse.map(mapApiProductToUiProduct)
+          setRelatedProducts(mappedRelated)
+        } catch (relatedError) {
+          console.warn("Failed to fetch related products:", relatedError)
+          setRelatedProducts([])
         }
       } catch (err: any) {
         console.error("Error fetching product:", err)
@@ -233,7 +159,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       }
     }
 
-    // Only fetch if we have a slug
     if (slug) {
       fetchProduct()
     }
@@ -313,23 +238,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   }
 
-  const handleVideoPlay = (index: number) => {
-    if (videoRef.current && product?.videos && product.videos.length > 0) {
-      if (activeVideo === index && isPlaying) {
-        videoRef.current.pause()
-        setIsPlaying(false)
-      } else {
-        setActiveVideo(index)
-        videoRef.current.src = product.videos[index].url
-        videoRef.current.play().catch((error) => {
-          console.error("Error playing video:", error)
-          setIsPlaying(false)
-        })
-        setIsPlaying(true)
-      }
-    }
-  }
-
   const toggle360View = () => {
     setIs360Active(!is360Active)
     setRotation(0)
@@ -358,15 +266,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       description: `You marked this review as ${isHelpful ? "helpful" : "not helpful"}`,
     })
   }
-
-  useEffect(() => {
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.pause()
-        videoRef.current.src = ""
-      }
-    }
-  }, [])
 
   if (loading) {
     return (
@@ -703,27 +602,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                   <span className="text-sm font-medium text-slate-900">{product.brand}</span>
                 </div>
               )}
-              {product.material && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Material:</span>
-                  <span className="text-sm font-medium text-slate-900">{product.material}</span>
-                </div>
-              )}
-              {product.weight && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Weight:</span>
-                  <span className="text-sm font-medium text-slate-900">{product.weight}</span>
-                </div>
-              )}
-              {product.dimensions && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Dimensions:</span>
-                  <span className="text-sm font-medium text-slate-900">
-                    {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height}{" "}
-                    {product.dimensions.unit}
-                  </span>
-                </div>
-              )}
               <div className="flex justify-between">
                 <span className="text-sm text-slate-600">Category:</span>
                 <span className="text-sm font-medium text-slate-900">{product.category}</span>
@@ -810,27 +688,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                         <span className="text-slate-900 font-medium">{product.brand}</span>
                       </div>
                     )}
-                    {product.material && (
-                      <div className="flex justify-between py-2 border-b border-slate-100">
-                        <span className="text-slate-600">Material</span>
-                        <span className="text-slate-900 font-medium">{product.material}</span>
-                      </div>
-                    )}
-                    {product.weight && (
-                      <div className="flex justify-between py-2 border-b border-slate-100">
-                        <span className="text-slate-600">Weight</span>
-                        <span className="text-slate-900 font-medium">{product.weight}</span>
-                      </div>
-                    )}
-                    {product.dimensions && (
-                      <div className="flex justify-between py-2 border-b border-slate-100">
-                        <span className="text-slate-600">Dimensions</span>
-                        <span className="text-slate-900 font-medium">
-                          {product.dimensions.length} × {product.dimensions.width} × {product.dimensions.height}{" "}
-                          {product.dimensions.unit}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex justify-between py-2 border-b border-slate-100">
                       <span className="text-slate-600">Stock Quantity</span>
                       <span className="text-slate-900 font-medium">{product.stockQuantity} units</span>
@@ -873,19 +730,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                       </div>
                     )}
 
-                    {product.tags && product.tags.length > 0 && (
-                      <div className="py-2 border-b border-slate-100">
-                        <span className="text-slate-600 block mb-2">Tags</span>
-                        <div className="flex flex-wrap gap-2">
-                          {product.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     <div className="py-2 border-b border-slate-100">
                       <span className="text-slate-600 block mb-2">Cash on Delivery</span>
                       <Badge variant={product.isCashOnDeliveryAvailable ? "default" : "destructive"}>
@@ -916,38 +760,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                   </ul>
                 </div>
               )}
-
-              {/* Custom Details Section */}
-              {product.customDetails && product.customDetails.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="font-semibold mb-3 text-slate-900">Additional Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {product.customDetails.map((detail, index) => (
-                      <div key={index} className="flex justify-between py-2 border-b border-slate-100">
-                        <span className="text-slate-600">{detail.label}</span>
-                        <span className="text-slate-900 font-medium">{detail.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Policies Section */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {product.returnPolicy && (
-                  <div>
-                    <h4 className="font-semibold mb-2 text-slate-900">Return Policy</h4>
-                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{product.returnPolicy}</p>
-                  </div>
-                )}
-
-                {product.warranty && (
-                  <div>
-                    <h4 className="font-semibold mb-2 text-slate-900">Warranty</h4>
-                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">{product.warranty}</p>
-                  </div>
-                )}
-              </div>
             </TabsContent>
 
             <TabsContent value="reviews" className="p-4 border rounded-md mt-4">
