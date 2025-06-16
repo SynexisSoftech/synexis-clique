@@ -1,55 +1,57 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRouter, useSearchParams } from "next/navigation"
-import { verifySignupOtp } from "../../../service/authApi" // Adjust path as needed
-
-// No need for TempUserData interface on the client-side anymore,
-// as it's not passed via URL. The backend handles its retrieval.
+import { verifySignupOtp, resendSignupOtp } from "../../../service/authApi"
 
 export default function VerificationForm() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-const [tempUserData, setTempUserData] = useState<any>(null);
+  const [tempUserData, setTempUserData] = useState<any>(null)
+  const [isResending, setIsResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+
   const router = useRouter()
   const searchParams = useSearchParams()
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null)
-  // New state to hold the verification token from the URL
-  // const [verificationToken, setVerificationToken] = useState<string | null>(null)
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    // const tokenParam = searchParams.get('verificationToken') // Retrieve the new token
 
     if (emailParam) {
       setVerificationEmail(emailParam)
     } else {
       setError("Verification data missing. Please try signing up again.")
       console.error("Email parameter missing for verification.")
-      // Optionally redirect: router.replace('/auth/signup');
     }
-const storedTempUserData = sessionStorage.getItem('tempUserDataForVerification');
-  if (storedTempUserData) {
-    setTempUserData(JSON.parse(storedTempUserData));
-  } else {
-    setError("Temporary user data missing. Please try signing up again.");
-    console.error("tempUserData missing from session storage.");
-  }
-    // if (tokenParam) {
-    //   setVerificationToken(tokenParam)
-    // } else {
-    //   setError("Verification token missing. Please try signing up again.")
-    //   console.error("Verification token parameter missing.")
-    //   // Optionally redirect: router.replace('/auth/signup');
-    // }
-  }, [searchParams, router])
+
+    const storedTempUserData = sessionStorage.getItem('tempUserDataForVerification')
+    if (storedTempUserData) {
+      setTempUserData(JSON.parse(storedTempUserData))
+    } else {
+      setError("Temporary user data missing. Please try signing up again.")
+      console.error("tempUserData missing from session storage.")
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => {
+        setResendCooldown(prev => prev - 1)
+      }, 1000)
+    }
+    return () => clearTimeout(timer)
+  }, [resendCooldown])
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length <= 1 && (/^[0-9]$/.test(value) || value === '')) {
@@ -58,7 +60,7 @@ const storedTempUserData = sessionStorage.getItem('tempUserDataForVerification')
       setOtp(newOtp)
 
       if (value && index < 5) {
-        const nextInput = document.getElementById(`otp-${index + 1}`)
+        const nextInput = inputRefs.current[index + 1]
         nextInput?.focus()
       }
     }
@@ -66,66 +68,128 @@ const storedTempUserData = sessionStorage.getItem('tempUserDataForVerification')
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-${index - 1}`)
+      const prevInput = inputRefs.current[index - 1]
       prevInput?.focus()
     }
   }
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setIsLoading(true)
-  setError(null)
-  setSuccess(null)
-
-  const fullOtp = otp.join("")
-
-  if (fullOtp.length !== 6) {
-    setError("Please enter a 6-digit OTP.")
-    setIsLoading(false)
-    return
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasteData = e.clipboardData.getData('text/plain').trim()
+    if (/^\d{6}$/.test(pasteData)) {
+      const otpArray = pasteData.split('').slice(0, 6)
+      setOtp(otpArray)
+      
+      // Focus the last input after paste
+      const lastInput = inputRefs.current[Math.min(otpArray.length - 1, 5)]
+      lastInput?.focus()
+    }
   }
 
-  // Ensure only email is present before proceeding if verificationToken is removed
-  if (!verificationEmail) { // Simplified check
-      setError("Verification data is not fully loaded. Please try again or refresh the page.");
-      setIsLoading(false);
-      return;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
+    setValidationErrors([])
 
-  try {
-    const verificationData = {
-      email: verificationEmail,
-      otp: fullOtp,
-       tempUserData: tempUserData,
-      // Remove this line:
-      // verificationToken: verificationToken,
+    const fullOtp = otp.join("")
+
+    if (fullOtp.length !== 6) {
+      setError("Please enter a 6-digit OTP.")
+      setIsLoading(false)
+      return
     }
 
-    const response = await verifySignupOtp(verificationData)
-
-    setSuccess(response.message || "Account verified successfully!")
-
-    if (response.accessToken) {
-      router.replace('/admin')
+    if (!verificationEmail || !tempUserData) {
+      setError("Verification data is not fully loaded. Please try again or refresh the page.")
+      setIsLoading(false)
+      return
     }
 
-  } catch (err: any) {
-    console.error("Verification failed:", err)
-    const errorMessage = err.message || err.toString() || "OTP verification failed. Please try again."
-    setError(errorMessage)
-  } finally {
-    setIsLoading(false)
-  }
-}
+    try {
+      const verificationData = {
+        email: verificationEmail,
+        otp: fullOtp,
+        tempUserData: tempUserData,
+      }
 
-// Simplify this condition:
-if (!verificationEmail) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      {error ? <p className="text-red-600">{error}</p> : <p>Loading verification data...</p>}
-    </div>
-  )
-}
+      const response = await verifySignupOtp(verificationData)
+
+      setSuccess(response.message || "Account verified successfully!")
+      sessionStorage.removeItem('tempUserDataForVerification')
+
+      if (response.accessToken) {
+        router.replace('/admin')
+      }
+    } catch (err: any) {
+      console.error("Verification failed:", err)
+      if (err && err.errors && Array.isArray(err.errors)) {
+        const messages: string[] = []
+        err.errors.forEach((errorObj: any) => {
+          for (const key in errorObj) {
+            if (Object.prototype.hasOwnProperty.call(errorObj, key)) {
+              messages.push(errorObj[key])
+            }
+          }
+        })
+        setValidationErrors(messages)
+        setError(err.message || "Validation failed. Please check the details below.")
+      } else {
+        const errorMessage = err.message || err.toString() || "OTP verification failed. Please try again."
+        setError(errorMessage)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResendOtp = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResending(true)
+    setError(null)
+    setSuccess(null)
+    setValidationErrors([])
+
+    if (!verificationEmail) {
+      setError("Cannot resend OTP: Email not found.")
+      setIsResending(false)
+      return
+    }
+
+    try {
+      const response = await resendSignupOtp({ email: verificationEmail })
+      setSuccess(response.message || "New OTP sent successfully! Please check your inbox.")
+      setResendCooldown(60)
+    } catch (err: any) {
+      console.error("Resend OTP failed:", err)
+      if (err && err.errors && Array.isArray(err.errors)) {
+        const messages: string[] = []
+        err.errors.forEach((errorObj: any) => {
+          for (const key in errorObj) {
+            if (Object.prototype.hasOwnProperty.call(errorObj, key)) {
+              messages.push(errorObj[key])
+            }
+          }
+        })
+        setValidationErrors(messages)
+        setError(err.message || "Resend OTP failed. Please check the details below.")
+      } else {
+        const errorMessage = err.message || err.toString() || "Failed to resend OTP. Please try again."
+        setError(errorMessage)
+      }
+    } finally {
+      setIsResending(false)
+    }
+  }
+
+  if (!verificationEmail || !tempUserData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        {error ? <p className="text-red-600">{error}</p> : <p>Loading verification data...</p>}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
@@ -152,17 +216,30 @@ if (!verificationEmail) {
                   value={digit}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={handlePaste}
+                  ref={(el) => (inputRefs.current[index] = el)}
                   className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 xl:w-16 xl:h-16 text-center text-sm sm:text-base md:text-lg lg:text-xl font-semibold border-2 border-gray-300 rounded-[4px] sm:rounded-[6px] focus:border-[#6F4E37] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors"
                   maxLength={1}
+                  inputMode="numeric"
                 />
               ))}
             </div>
           </div>
 
           {/* Error and Success Messages */}
-          {error && (
+          {error && validationErrors.length === 0 && (
             <div className="rounded-md bg-red-50 p-3 text-center">
               <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+          {validationErrors.length > 0 && (
+            <div className="rounded-md bg-red-50 p-3 text-left">
+              <p className="text-sm font-semibold text-red-700 mb-1">Validation Errors:</p>
+              <ul className="list-disc list-inside text-sm text-red-600">
+                {validationErrors.map((msg, index) => (
+                  <li key={index}>{msg}</li>
+                ))}
+              </ul>
             </div>
           )}
           {success && (
@@ -187,12 +264,13 @@ if (!verificationEmail) {
         <div className="text-center px-4 sm:px-0">
           <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-600">
             Didn't receive the code?{" "}
-            <Link
-              href="/resend-signup-otp-page" // You might want a dedicated page for resend logic
-              className="text-gray-800 hover:text-gray-900 font-semibold uppercase tracking-[0.05em] sm:tracking-[0.1em] transition-colors"
+            <Button
+              onClick={handleResendOtp}
+              disabled={isResending || resendCooldown > 0}
+              className="p-0 text-gray-800 hover:text-gray-900 font-semibold uppercase tracking-[0.05em] sm:tracking-[0.1em] transition-colors bg-transparent hover:bg-transparent h-auto"
             >
-              RESEND CODE
-            </Link>
+              {isResending ? "RESENDING..." : resendCooldown > 0 ? `RESEND IN ${resendCooldown}s` : "RESEND CODE"}
+            </Button>
           </p>
         </div>
       </div>

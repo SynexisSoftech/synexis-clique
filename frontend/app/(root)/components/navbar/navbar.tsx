@@ -21,7 +21,7 @@ export default function Navbar() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const { cartItemsCount } = useCart()
-  const [wishlistCount] = useState(5) // You can replace this with actual wishlist count
+  // const [wishlistCount] = useState(5) // You can replace this with actual wishlist count
 
   const navigationLinks = [
     { name: "PRODUCTS", href: "/products" },
@@ -37,13 +37,13 @@ export default function Navbar() {
     router.push(`/products?search=${encodeURIComponent(query)}`)
   }
 
-  const handleWishlistClick = () => {
-    if (isAuthenticated) {
-      router.push("/wishlist")
-    } else {
-      router.push("/auth/login")
-    }
-  }
+  // const handleWishlistClick = () => {
+  //   if (isAuthenticated) {
+  //     router.push("/wishlist")
+  //   } else {
+  //     router.push("/auth/login")
+  //   }
+  // }
 
   const handleCartClick = () => {
     if (isAuthenticated) {
@@ -154,7 +154,7 @@ export default function Navbar() {
             </div>
 
             {/* Wishlist Icon */}
-            <WishlistIcon count={wishlistCount} onClick={handleWishlistClick} />
+    
 
             {/* Cart Dropdown */}
             <CartDropdown count={cartItemsCount} onClick={handleCartClick} />

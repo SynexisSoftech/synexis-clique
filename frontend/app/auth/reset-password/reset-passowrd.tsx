@@ -70,7 +70,7 @@ export default function ResetPasswordForm() {
       setSuccessMessage(response.message || "Password reset successfully! You can now log in with your new password.")
       
       setTimeout(() => {
-        router.push('/login');
+        router.push('/auth/login');
       }, 3000); 
 
     } catch (err: any) {

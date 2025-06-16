@@ -21,8 +21,8 @@ export const authActionLimiter = rateLimit({
 // Even stricter for OTP generation to prevent spam
 export const otpGenerationLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 5, // Limit each IP to 5 OTP requests per windowMs
+    max: 10, // Increased limit
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Too many OTP requests. Please try again after 5 minutes.' },
-  });
+});
