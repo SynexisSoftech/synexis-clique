@@ -12,6 +12,11 @@ import {
   Building2,
   Users,
   MessageSquare,
+  Star,
+  ShoppingCart,
+  ImageIcon,
+  Phone,
+  Share2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -95,7 +100,7 @@ const data = {
         },
       ],
     },
-    
+
     {
       title: "Users",
       url: "/admin/users",
@@ -104,28 +109,28 @@ const data = {
     },
 
     {
-title:"add homepage image",
-url:"admin/hero",
-icon:Users,
-isActive:false,
+      title: "Add Homepage Image",
+      url: "/admin/hero",
+      icon: ImageIcon,
+      isActive: false,
     },
-       {
-title:"Reviews",
-url:"admin/product-reviews",
-icon:Users,
-isActive:false,
+    {
+      title: "Reviews",
+      url: "/admin/product-reviews",
+      icon: Star,
+      isActive: false,
     },
-     {
-title:"Oders",
-url:"admin/oders",
-icon:Users,
-isActive:false,
+    {
+      title: "Orders",
+      url: "/admin/orders",
+      icon: ShoppingCart,
+      isActive: false,
     },
-     {
-title:"contact info",
-url:"admin/contact-info",
-icon:Users,
-isActive:false,
+    {
+      title: "Contact Info",
+      url: "/admin/contact-info",
+      icon: Phone,
+      isActive: false,
     },
     {
       title: "Contacts",
@@ -133,10 +138,10 @@ isActive:false,
       icon: MessageSquare,
       isActive: false,
     },
-     {
-      title: "Social-Media",
+    {
+      title: "Social Media",
       url: "/admin/social-media",
-      icon: MessageSquare,
+      icon: Share2,
       isActive: false,
     },
     {
