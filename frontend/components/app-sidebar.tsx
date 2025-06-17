@@ -144,12 +144,12 @@ const data = {
       icon: Share2,
       isActive: false,
     },
-    {
-      title: "Settings",
-      url: "/admin/settings",
-      icon: Settings,
-      isActive: false,
-    },
+    // {
+    //   title: "Settings",
+    //   url: "/admin/settings",
+    //   icon: Settings,
+    //   isActive: false,
+    // },
     //  {
     //   title: "user management",
     //   url: "/admin/user-management",
