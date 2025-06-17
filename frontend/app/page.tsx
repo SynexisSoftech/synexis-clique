@@ -13,6 +13,7 @@ import GenderCategories from "../app/(root)/components/category-homepage/gender-
 import CategoryCom from "../app/(root)/components/category-homepage/category-showcase"
 import NewArrivalsSection from "./(root)/components/new-arrival/page"
 import TopSalesSection from "./(root)/components/top-sales/page"
+import { ProductShowcase } from "./(root)/components/product-showcase/product-showcase"
 
 export default function HomePage() {
   return (
@@ -20,6 +21,7 @@ export default function HomePage() {
       <Navbar />
       <Hero />
       <CategoryShowcase />
+      <ProductShowcase />
       <GenderCategories />
       <CategoryCom />
       <NewArrivalsSection />
