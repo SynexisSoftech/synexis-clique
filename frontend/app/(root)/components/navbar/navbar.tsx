@@ -1,6 +1,4 @@
 "use client"
-
-import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
@@ -13,15 +11,13 @@ import { useCart } from "@/hooks/useCart"
 
 // Import the separate components
 import SearchComponent from "../search-bar/search-bar"
-import WishlistIcon from "../wishlist/wishlist"
 import CartDropdown from "./cart-dropdown"
 import ProfileDropdown from "../profile-dropdown/profile-dropdown"
 
 export default function Navbar() {
   const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth()
   const { cartItemsCount } = useCart()
-  // const [wishlistCount] = useState(5) // You can replace this with actual wishlist count
 
   const navigationLinks = [
     { name: "PRODUCTS", href: "/products" },
@@ -33,17 +29,8 @@ export default function Navbar() {
 
   const handleSearch = (query: string) => {
     console.log("Searching for:", query)
-    // Handle search logic here
     router.push(`/products?search=${encodeURIComponent(query)}`)
   }
-
-  // const handleWishlistClick = () => {
-  //   if (isAuthenticated) {
-  //     router.push("/wishlist")
-  //   } else {
-  //     router.push("/auth/login")
-  //   }
-  // }
 
   const handleCartClick = () => {
     if (isAuthenticated) {
@@ -55,6 +42,10 @@ export default function Navbar() {
 
   const handleSignInClick = () => {
     router.push("/auth/login")
+  }
+
+  const handleMobileLogout = () => {
+    logout()
   }
 
   return (
@@ -89,6 +80,34 @@ export default function Navbar() {
                     </SheetClose>
                   </div>
 
+                  {/* Mobile User Info */}
+                  {!authLoading && isAuthenticated && user && (
+                    <div className="px-6 py-4 border-b border-amber-100">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-[#6F4E37] text-white flex items-center justify-center text-sm font-medium">
+                          {user.photoURL ? (
+                            <Image
+                              src={user.photoURL || "/placeholder.svg"}
+                              alt={user.username || user.email}
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover"
+                            />
+                          ) : (
+                            user.username?.slice(0, 2).toUpperCase() || user.email?.slice(0, 2).toUpperCase() || "U"
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#6F4E37] truncate font-cormorant">
+                            {user.username || "User"}
+                          </p>
+                          <p className="text-xs text-[#6F4E37]/60 truncate">{user.email}</p>
+                          <p className="text-xs text-[#6F4E37]/40 capitalize">{user.role}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Mobile Navigation */}
                   <nav className="flex-1 px-6 py-8">
                     <div className="space-y-6">
@@ -102,18 +121,62 @@ export default function Navbar() {
                           </Link>
                         </SheetClose>
                       ))}
+
+                      {/* Mobile Profile Links */}
+                      {isAuthenticated && (
+                        <>
+                          <SheetClose asChild>
+                            <Link
+                              href="/profile"
+                              className="block text-base font-medium italic text-gray-700 hover:text-[#6F4E37] transition-colors duration-200 font-cormorant py-2"
+                            >
+                              MY PROFILE
+                            </Link>
+                          </SheetClose>
+                          <SheetClose asChild>
+                            <Link
+                              href="/orders"
+                              className="block text-base font-medium italic text-gray-700 hover:text-[#6F4E37] transition-colors duration-200 font-cormorant py-2"
+                            >
+                              MY ORDERS
+                            </Link>
+                          </SheetClose>
+                          {user?.role === "admin" && (
+                            <SheetClose asChild>
+                              <Link
+                                href="/admin"
+                                className="block text-base font-medium italic text-amber-600 hover:text-amber-700 transition-colors duration-200 font-cormorant py-2"
+                              >
+                                ADMIN PANEL
+                              </Link>
+                            </SheetClose>
+                          )}
+                        </>
+                      )}
                     </div>
                   </nav>
 
                   {/* Mobile Footer */}
                   <div className="p-6 border-t border-amber-100">
-                    {!authLoading && !isAuthenticated && (
-                      <Button
-                        onClick={handleSignInClick}
-                        className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic"
-                      >
-                        Sign In
-                      </Button>
+                    {!authLoading && (
+                      <>
+                        {isAuthenticated ? (
+                          <Button
+                            onClick={handleMobileLogout}
+                            variant="outline"
+                            className="w-full border-red-200 text-red-600 hover:bg-red-50 font-cormorant font-medium italic"
+                          >
+                            Sign Out
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={handleSignInClick}
+                            className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white font-cormorant font-medium italic"
+                          >
+                            Sign In
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -131,7 +194,7 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Desktop Navigation - Now in left section */}
+            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-4 xl:space-x-6">
               {navigationLinks.map((link) => (
                 <Link
@@ -153,13 +216,10 @@ export default function Navbar() {
               <SearchComponent onSearch={handleSearch} />
             </div>
 
-            {/* Wishlist Icon */}
-    
-
-            {/* Cart Dropdown */}
+            {/* Cart Dropdown - This one has API integration */}
             <CartDropdown count={cartItemsCount} onClick={handleCartClick} />
 
-            {/* Sign In Button or Profile Dropdown */}
+            {/* Desktop: Sign In Button or Profile Dropdown */}
             {!authLoading && (
               <>
                 {isAuthenticated ? (
