@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { publicCartService, type IUserCart, type AddItemToCartRequest, Cart, cartService } from "../service/public/cartService"
+import { type Cart, cartService } from "../service/public/cartService"
 import { useAuth } from "@/app/context/AuthContext"
+import { toast } from "@/hooks/use-toast"
 
 export function useCart() {
   const [cart, setCart] = useState<Cart | null>(null)
@@ -32,10 +33,25 @@ export function useCart() {
     try {
       const updatedCart = await cartService.addItemToCart(productId, quantity)
       setCart(updatedCart)
+
+      // Show success toast
+      toast({
+        title: "Added to Cart",
+        description: `Item has been added to your cart`,
+      })
+
       return updatedCart
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to add item to cart")
       console.error("Error adding to cart:", err)
+
+      // Show error toast
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to add item to cart",
+        variant: "destructive",
+      })
+
       throw err
     } finally {
       setIsLoading(false)

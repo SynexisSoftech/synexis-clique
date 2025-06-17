@@ -17,12 +17,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCart } from "@/hooks/useCart"
-import { useAuth } from "../../../context/AuthContext"
+import { useCart } from "../../../context/CartContext"
+import { useAuth } from "@/app/context/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 
 interface CartDropdownProps {
-  count: number
   onClick?: () => void
 }
 
@@ -35,14 +34,15 @@ const formatPrice = (price: number): string => {
   }).format(price)
 }
 
-export default function CartDropdown({ count, onClick }: CartDropdownProps) {
+export default function CartDropdown({ onClick }: CartDropdownProps) {
   const [open, setOpen] = useState(false)
-  const { cart, isLoading, removeFromCart } = useCart()
+  const { cart, isLoading, removeFromCart, cartItemsCount } = useCart()
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
 
+  console.log("CartDropdown render:", { cart, cartItemsCount, isLoading })
+
   const items = cart?.items || []
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0)
   const subtotal = items.reduce((total, item) => {
     const price = item.productId.discountPrice || item.productId.originalPrice
     return total + price * item.quantity
@@ -80,7 +80,6 @@ export default function CartDropdown({ count, onClick }: CartDropdownProps) {
 
   const handleCheckout = () => {
     setOpen(false)
-    // Navigation will be handled by the parent component
   }
 
   return (
@@ -94,14 +93,15 @@ export default function CartDropdown({ count, onClick }: CartDropdownProps) {
         >
           <ShoppingCart className="h-5 w-5 text-[#6F4E37]" />
           <AnimatePresence>
-            {itemCount > 0 && (
+            {cartItemsCount > 0 && (
               <motion.span
+                key={`cart-count-${cartItemsCount}`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
                 className="absolute -top-1 -right-1 bg-[#6F4E37] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
               >
-                {itemCount}
+                {cartItemsCount}
               </motion.span>
             )}
           </AnimatePresence>
@@ -110,8 +110,8 @@ export default function CartDropdown({ count, onClick }: CartDropdownProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80 bg-gradient-to-b from-white to-amber-50/30 border-[#6F4E37]/20" align="end">
         <DropdownMenuLabel className="flex justify-between items-center text-[#6F4E37] font-cormorant font-medium">
-          <span>Shopping Cart ({itemCount})</span>
-          {itemCount > 0 && (
+          <span>Shopping Cart ({cartItemsCount})</span>
+          {cartItemsCount > 0 && (
             <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-[#6F4E37]/10" onClick={() => setOpen(false)}>
               <X className="h-4 w-4 text-[#6F4E37]" />
             </Button>
@@ -160,14 +160,15 @@ export default function CartDropdown({ count, onClick }: CartDropdownProps) {
           <>
             <ScrollArea className="h-[300px]">
               <DropdownMenuGroup className="p-2">
-                <AnimatePresence>
+                <AnimatePresence mode="popLayout">
                   {items.map((item, index) => (
                     <motion.div
-                      key={`${item.productId._id}-${index}`}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
+                      key={`${item.productId._id}-${item.quantity}-${index}`}
+                      initial={{ opacity: 0, height: 0, y: -10 }}
+                      animate={{ opacity: 1, height: "auto", y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
+                      layout
                     >
                       <DropdownMenuItem className="flex p-0 focus:bg-[#6F4E37]/5 rounded-lg">
                         <div className="flex items-center gap-3 py-2 w-full px-2">

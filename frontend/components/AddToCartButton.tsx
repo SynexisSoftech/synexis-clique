@@ -1,10 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { useCart } from "@/hooks/useCart"
+import { useCart } from ".././app/context/CartContext"
 import { ShoppingCart, Plus, Minus, Loader2 } from "lucide-react"
 import { useState } from "react"
-import { toast } from "@/hooks/use-toast"
 import { useAuth } from "@/app/context/AuthContext"
 import { useRouter } from "next/navigation"
 
@@ -17,13 +16,13 @@ interface AddToCartButtonProps {
 
 export function AddToCartButton({ productId, className, variant = "default", size = "default" }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1)
-  const { addToCart, isLoading, cart } = useCart()
+  const [isAdding, setIsAdding] = useState(false)
+  const { addToCart, getItemQuantity, isLoading } = useCart()
   const { isAuthenticated } = useAuth()
   const router = useRouter()
 
-  // Check if item is already in cart
-  const existingItem = cart?.items?.find((item) => item.productId === productId)
-  const currentQuantity = existingItem?.quantity || 0
+  // Get current quantity in cart
+  const currentQuantity = getItemQuantity(productId)
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -31,10 +30,17 @@ export function AddToCartButton({ productId, className, variant = "default", siz
       return
     }
 
+    setIsAdding(true)
     try {
+      console.log("Button: Adding to cart", { productId, quantity })
       await addToCart(productId, quantity)
+      console.log("Button: Successfully added to cart")
+      // Reset quantity to 1 after successful add
+      setQuantity(1)
     } catch (error) {
-      console.error("Failed to add to cart:", error)
+      console.error("Button: Failed to add to cart:", error)
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -43,6 +49,8 @@ export function AddToCartButton({ productId, className, variant = "default", siz
       setQuantity(newQuantity)
     }
   }
+
+  const isButtonLoading = isLoading || isAdding
 
   return (
     <div className="flex items-center gap-2">
@@ -53,26 +61,61 @@ export function AddToCartButton({ productId, className, variant = "default", siz
               variant="ghost"
               size="sm"
               onClick={() => handleQuantityChange(quantity - 1)}
-              disabled={quantity <= 1}
+              disabled={quantity <= 1 || isButtonLoading}
             >
               <Minus className="h-4 w-4" />
             </Button>
             <span className="px-3 py-1 min-w-[3rem] text-center">{quantity}</span>
-            <Button variant="ghost" size="sm" onClick={() => handleQuantityChange(quantity + 1)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleQuantityChange(quantity + 1)}
+              disabled={isButtonLoading}
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={handleAddToCart} disabled={isLoading} variant={variant} size={size} className={className}>
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            {isLoading ? "Adding..." : "Add to Cart"}
+          <Button
+            onClick={handleAddToCart}
+            disabled={isButtonLoading}
+            variant={variant}
+            size={size}
+            className={className}
+          >
+            {isButtonLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Add to Cart
+              </>
+            )}
           </Button>
         </>
       ) : (
         <div className="flex items-center gap-2">
-          <span className="text-sm text-green-600">In cart: {currentQuantity}</span>
-          <Button onClick={handleAddToCart} disabled={isLoading} variant="outline" size={size} className={className}>
-            <Plus className="mr-2 h-4 w-4" />
-            {isLoading ? "Adding..." : "Add More"}
+          <span className="text-sm text-green-600 font-medium">In cart: {currentQuantity}</span>
+          <Button
+            onClick={handleAddToCart}
+            disabled={isButtonLoading}
+            variant="outline"
+            size={size}
+            className={className}
+          >
+            {isButtonLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Add More
+              </>
+            )}
           </Button>
         </div>
       )}

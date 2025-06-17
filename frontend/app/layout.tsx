@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext'
 
 import { Cormorant_Garamond } from "next/font/google"
 import { Toaster } from '@/components/ui/toaster'
+import { CartProvider } from './context/CartContext'
 
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-           <AuthProvider>{children}  <Toaster /></AuthProvider></body>
+           <AuthProvider>    <CartProvider>{children}  <Toaster /></CartProvider></AuthProvider></body>
     </html>
   )
 }
