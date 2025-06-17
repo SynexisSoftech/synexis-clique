@@ -95,85 +95,73 @@ export interface ProductFilters {
 
 // --- ProductsService Class ---
 
+function handleApiError(error: any, context: string): never {
+  console.error(`Error ${context}:`, error.response?.data || error);
+
+  const errorResponse = error.response?.data;
+
+  // If the backend provides a structured response, throw it directly.
+  // This allows the UI to handle it intelligently.
+  if (errorResponse && errorResponse.message) {
+    // If there's a detailed 'errors' object from Mongoose validation...
+    if (errorResponse.errors && typeof errorResponse.errors === 'object') {
+      const specificMessages = Object.values<{ message: string }>(errorResponse.errors)
+        .map(err => err.message) // Correctly extract the message string
+        .join('. ');
+      // Combine the main message with specific details
+      errorResponse.fullMessage = `${errorResponse.message}: ${specificMessages}`;
+    }
+    throw errorResponse; // Throw the whole object
+  }
+
+  // Fallback for network errors or unexpected error structures
+  throw { message: `A network error occurred while ${context}. Please try again.` };
+}
+
+
 class ProductsService {
   private readonly baseUrl = "/api/admin/products";
 
-  /**
-   * Get all products with filtering and pagination.
-   */
   async getProducts(filters: ProductFilters = {}): Promise<ProductsResponse> {
     try {
       const params = new URLSearchParams();
-      if (filters.page) params.append("page", filters.page.toString());
-      if (filters.limit) params.append("limit", filters.limit.toString());
-      if (filters.search) params.append("search", filters.search);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.categoryId) params.append("categoryId", filters.categoryId);
-      if (filters.subcategoryId) params.append("subcategoryId", filters.subcategoryId);
-      if (filters.brand) params.append("brand", filters.brand);
-      if (filters.cod !== undefined) params.append("cod", String(filters.cod));
+      // ... (your existing params logic)
+       if (filters.page) params.append("page", filters.page.toString());
+       if (filters.limit) params.append("limit", filters.limit.toString());
+       if (filters.search) params.append("search", filters.search);
+       if (filters.status) params.append("status", filters.status);
+       if (filters.categoryId) params.append("categoryId", filters.categoryId);
+       if (filters.subcategoryId) params.append("subcategoryId", filters.subcategoryId);
+       if (filters.brand) params.append("brand", filters.brand);
+       if (filters.cod !== undefined) params.append("cod", String(filters.cod));
 
       const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching products:", error);
-      const message = error.response?.data?.message || "Failed to fetch products";
-      throw new Error(message);
+      handleApiError(error, "fetching products");
     }
   }
 
-  /**
-   * Get a single product by its ID.
-   */
   async getProductById(id: string): Promise<Product> {
     try {
       const response = await apiClient.get(`${this.baseUrl}/${id}`);
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching product ${id}:`, error);
-      const message = error.response?.data?.message || "Failed to fetch product";
-      throw new Error(message);
+      handleApiError(error, `fetching product ${id}`);
     }
   }
 
-  /**
-   * Create a new product.
-   */
-async createProduct(data: CreateProductData): Promise<Product> {
-  try {
-    const response = await apiClient.post(this.baseUrl, data, {
-      headers: { "Content-Type": "application/json" },
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Error creating product:", error.response?.data || error);
-
-    // Default error message
-    let errorMessage = "Failed to create product";
-
-    const errorResponseData = error.response?.data;
-
-    if (errorResponseData) {
-      // If there's a specific 'message' field, use it.
-      if (errorResponseData.message) {
-        errorMessage = errorResponseData.message;
-      }
-
-      // If there's an 'errors' object, format a more detailed message.
-      if (errorResponseData.errors && typeof errorResponseData.errors === 'object') {
-        const specificErrors = Object.values(errorResponseData.errors).flat().join(', ');
-        if (specificErrors) {
-          errorMessage = `${errorMessage}: ${specificErrors}`;
-        }
-      }
+  async createProduct(data: CreateProductData): Promise<Product> {
+    try {
+      const response = await apiClient.post(this.baseUrl, data, {
+        headers: { "Content-Type": "application/json" },
+      });
+      return response.data;
+    } catch (error: any) {
+      handleApiError(error, "creating a product");
     }
-
-    throw new Error(errorMessage);
   }
-}
-  /**
-   * Update an existing product.
-   */
+
   async updateProduct(data: UpdateProductData): Promise<Product> {
     try {
       const { id, ...updateData } = data;
@@ -182,25 +170,18 @@ async createProduct(data: CreateProductData): Promise<Product> {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error updating product ${data.id}:`, error);
-      const message = error.response?.data?.message || "Failed to update product";
-      throw new Error(message);
+      handleApiError(error, `updating product ${data.id}`);
     }
   }
 
-  /**
-   * Delete a product by its ID.
-   */
   async deleteProduct(id: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.delete(`${this.baseUrl}/${id}`);
       return response.data;
     } catch (error: any) {
-      console.error(`Error deleting product ${id}:`, error);
-      const message = error.response?.data?.message || "Failed to delete product";
-      throw new Error(message);
+      // The bug is fixed here by calling the central handler
+      handleApiError(error, `deleting product ${id}`);
     }
   }
 }
-
 export const productsService = new ProductsService();

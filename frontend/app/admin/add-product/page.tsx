@@ -101,6 +101,7 @@ export default function AddProductPage() {
   const [newSize, setNewSize] = useState<string>("")
   const [customColorName, setCustomColorName] = useState<string>("")
   const [customColorHex, setCustomColorHex] = useState<string>("#000000")
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const [formData, setFormData] = useState<IProductFormData>({
     title: "",
@@ -287,7 +288,15 @@ export default function AddProductPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
     setIsLoading(true)
-    setError(null)
+    setError(null) // Clear general errors on new submission
+    setValidationErrors({}) // Clear validation errors on new submission
+
+    // --- Client-side validation can stay as it is ---
+    if (formData.images.length === 0) {
+      setError("At least one product image is required.")
+      setIsLoading(false)
+      return
+    }
 
     // Client-side validation
     if (
@@ -367,9 +376,26 @@ export default function AddProductPage() {
       await productsService.createProduct(productPayload)
       router.push("/admin/products")
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || "Failed to create product."
-      setError(errorMessage)
-      console.error("Product creation failed:", err)
+      // The service now throws the structured error object from the API
+      const apiError = err
+
+      // Set the general error message (e.g., "Validation Error")
+      setError(apiError.message || "An unexpected error occurred.")
+
+      // Check if there are specific field validation errors
+      if (apiError.errors && typeof apiError.errors === "object") {
+        // Mongoose sends errors like: { title: { message: "..." } }
+        // We transform it into: { title: "..." }
+        const newValidationErrors = Object.keys(apiError.errors).reduce(
+          (acc, key) => {
+            acc[key] = apiError.errors[key].message
+            return acc
+          },
+          {} as Record<string, string>,
+        )
+
+        setValidationErrors(newValidationErrors)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -416,19 +442,24 @@ export default function AddProductPage() {
                       onChange={handleInputChange("title")}
                       required
                       maxLength={200}
+                      className={validationErrors.title ? "border-red-500" : ""}
                     />
+                    {validationErrors.title && <p className="text-sm text-red-600">{validationErrors.title}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Full Description *</Label>
                     <Textarea
                       id="description"
                       placeholder="Describe the product in detail..."
-                      className="min-h-[120px]"
+                      className={`min-h-[120px] ${validationErrors.description ? "border-red-500" : ""}`}
                       value={formData.description}
                       onChange={handleInputChange("description")}
                       required
                       maxLength={2000}
                     />
+                    {validationErrors.description && (
+                      <p className="text-sm text-red-600">{validationErrors.description}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="shortDescription">Short Description</Label>
@@ -772,7 +803,7 @@ export default function AddProductPage() {
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
                     <Select value={formData.categoryId} onValueChange={handleSelectChange("categoryId")} required>
-                      <SelectTrigger>
+                      <SelectTrigger className={validationErrors.categoryId ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -783,6 +814,9 @@ export default function AddProductPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {validationErrors.categoryId && (
+                      <p className="text-sm text-red-600">{validationErrors.categoryId}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="subcategory">Subcategory</Label>
@@ -846,7 +880,11 @@ export default function AddProductPage() {
                         onChange={handleInputChange("originalPrice")}
                         required
                         min="0"
+                        className={validationErrors.originalPrice ? "border-red-500" : ""}
                       />
+                      {validationErrors.originalPrice && (
+                        <p className="text-sm text-red-600">{validationErrors.originalPrice}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="discountPrice">Discount Price</Label>
@@ -871,7 +909,11 @@ export default function AddProductPage() {
                       onChange={handleInputChange("stockQuantity")}
                       required
                       min="0"
+                      className={validationErrors.stockQuantity ? "border-red-500" : ""}
                     />
+                    {validationErrors.stockQuantity && (
+                      <p className="text-sm text-red-600">{validationErrors.stockQuantity}</p>
+                    )}
                   </div>
                   <div className="flex items-center justify-between pt-2">
                     <Label htmlFor="cashOnDelivery" className="font-medium">
