@@ -89,7 +89,7 @@ export function ProductShowcase() {
     () => (
       <div className="flex gap-4 overflow-hidden">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="min-w-[280px] animate-pulse">
+          <div key={index} className="w-[280px] flex-shrink-0 animate-pulse">
             <div className="bg-gray-200 rounded-lg aspect-square mb-3"></div>
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
             <div className="h-3 bg-gray-200 rounded w-1/2 mb-3"></div>
@@ -106,7 +106,11 @@ export function ProductShowcase() {
     return (
       <div className="w-full p-8 text-center">
         <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={fetchProducts} variant="outline">
+        <Button
+          onClick={fetchProducts}
+          variant="outline"
+          className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
+        >
           Try Again
         </Button>
       </div>
@@ -131,6 +135,7 @@ export function ProductShowcase() {
               onClick={() => scroll("left")}
               disabled={loading}
               aria-label="Scroll left"
+              className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -140,6 +145,7 @@ export function ProductShowcase() {
               onClick={() => scroll("right")}
               disabled={loading}
               aria-label="Scroll right"
+              className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -154,17 +160,13 @@ export function ProductShowcase() {
             <div
               ref={scrollContainerRef}
               className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide"
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
             >
               {products.map((product) => (
-                <div key={product._id} className="min-w-[280px] flex-shrink-0 snap-start">
-                  <Card className="h-full border overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+                <div key={product._id} className="w-[280px] flex-shrink-0 snap-start flex flex-col">
+                  <Card className="h-full border overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1 flex flex-col">
                     {/* Product Image */}
                     <Link href={`/products/${product._id}`}>
-                      <div className="relative aspect-square overflow-hidden">
+                      <div className="relative w-full aspect-square overflow-hidden">
                         <Image
                           src={product.images[0] || "/placeholder.svg?height=300&width=300"}
                           alt={product.title}
@@ -190,7 +192,7 @@ export function ProductShowcase() {
                     </Link>
 
                     {/* Product Info */}
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 flex flex-col flex-grow">
                       <Link href={`/products/${product._id}`}>
                         <h3 className="font-semibold text-base mb-1 line-clamp-1 hover:text-primary transition-colors">
                           {product.title}
@@ -230,20 +232,22 @@ export function ProductShowcase() {
                         </div>
                       )}
 
-                      {/* Add to Cart Button */}
-                      <AddToCartButton
-                        productId={product._id}
-                        size="sm"
-                        className="w-full"
-                        variant={product.stockQuantity === 0 ? "outline" : "default"}
-                      />
+                      {/* Add to Cart Button and Stock (pushed to bottom) */}
+                      <div className="mt-auto">
+                        <AddToCartButton
+                          productId={product._id}
+                          size="sm"
+                          className="w-full bg-[#8B4513] hover:bg-[#A0522D] text-white"
+                          variant={product.stockQuantity === 0 ? "outline" : "default"}
+                        />
 
-                      {/* Stock Info */}
-                      {product.stockQuantity > 0 && product.stockQuantity <= 5 && (
-                        <p className="text-xs text-orange-600 mt-2 text-center">
-                          Only {product.stockQuantity} left in stock!
-                        </p>
-                      )}
+                        {/* Stock Info */}
+                        {product.stockQuantity > 0 && product.stockQuantity <= 5 && (
+                          <p className="text-xs text-orange-600 mt-2 text-center">
+                            Only {product.stockQuantity} left in stock!
+                          </p>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -257,7 +261,7 @@ export function ProductShowcase() {
 
         {/* View All Button */}
         <div className="flex justify-center mt-6">
-          <Button variant="outline" asChild>
+          <Button asChild className="bg-[#8B4513] hover:bg-[#A0522D] text-white">
             <Link href="/products">View All Products</Link>
           </Button>
         </div>

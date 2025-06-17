@@ -116,6 +116,7 @@ const mapApiProductToUiProduct = (product: ProductDetails) => {
   }
 }
 
+
 interface ProductPageProps {
   params: Promise<{ slug: string }>
 }
