@@ -253,6 +253,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       res.status(403).json({ message: 'Account not verified. Please check your email for OTP or resend OTP.' });
       return;
     }
+     if (user.isBlocked) {
+      console.warn(`[Login] Login attempt for blocked account: ${email}`);
+      res.status(403).json({ message: 'Sorry, your account is blocked at the moment. Please contact support for assistance.' });
+      return;
+    }
 
     // 3. Compare the provided password with the hashed password stored in the database.
     const isPasswordMatch = await bcrypt.compare(password, user.password);
@@ -288,6 +293,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         username: user.username,
         email: user.email,
         role: user.role, // Include user's role
+        isBlocked: user.isBlocked,
+
         photoURL: user.photoURL // Include user's profile picture URL
       }
     });
@@ -457,6 +464,13 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
             res.status(403).json({ message: 'User account is not verified.' });
             return;
         }
+          if (user.isBlocked) {
+      console.warn(`[Get User Details] Blocked user attempted to retrieve details: ${user.email}`);
+      // Invalidate the refresh token cookie if the user is blocked and trying to access details
+      res.cookie('refreshToken', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', expires: new Date(0) });
+      res.status(403).json({ message: 'Your account is blocked. Please contact support.' });
+      return;
+    }
         
         console.log(`[Get User Details] Successfully retrieved details for user: ${user.email}`);
         res.status(200).json({
@@ -468,6 +482,7 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
                 role: user.role,
                 photoURL: user.photoURL,
                 isVerified: user.isVerified,
+                isBlocked: user.isBlocked,
                 createdAt: user.createdAt, // Optionally include timestamps
                 updatedAt: user.updatedAt
             }
@@ -511,6 +526,14 @@ export const refreshTokenHandler = async (req: Request, res: Response): Promise<
             return;
         }
 
+          // New: Check if the user is blocked during refresh token request
+    if (user.isBlocked) {
+      console.warn(`[Refresh Token] Blocked user attempted to refresh token: ${user.email}`);
+      // Invalidate the refresh token cookie if the user is blocked
+      res.cookie('refreshToken', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', expires: new Date(0) });
+      res.status(403).json({ message: 'Your account is blocked. Please log in again or contact support.' });
+      return;
+    }
         // Generate new pair of tokens
         const { accessToken, refreshToken: newRefreshToken } = TokenService.generateTokens(user._id.toString());
         console.log(`[Refresh Token] New access token generated for user: ${user.email}`);

@@ -3,6 +3,7 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Review } from '../../models/review.model'; // Adjust path
 import { Product } from '../../models/product.model'; // Adjust path
 import mongoose from 'mongoose';
+import { Order } from '../../models/order.model';
 
 /**
  * @desc    Create a new review for a product
@@ -13,8 +14,9 @@ export const createReview = async (req: AuthRequest, res: Response, next: NextFu
     const { rating, comment } = req.body;
     const { productId } = req.params;
 
+    // A. Check if user is logged in
     if (!req.user) {
-        res.status(401).json({ message: 'Not authorized, user not found' });
+        res.status(401).json({ message: 'Not authorized, you must be logged in to leave a review.' });
         return;
     }
 
@@ -24,35 +26,51 @@ export const createReview = async (req: AuthRequest, res: Response, next: NextFu
             return;
         }
         
-        // 1. Check if the product exists
+        // B. Check if the product exists
         const product = await Product.findById(productId);
         if (!product) {
             res.status(404).json({ message: 'Product not found' });
             return;
         }
+
+        // 👈 **2. Check if the user has purchased the product**
+        // We look for a completed order from this user that contains the product.
+        const hasPurchased = await Order.findOne({
+            userId: req.user._id,
+            'items.productId': new mongoose.Types.ObjectId(productId),
+            status: 'COMPLETED'
+        });
+
+        if (!hasPurchased) {
+            res.status(403).json({ message: 'You can only review products that you have purchased.' });
+            return;
+        }
         
-        // 2. Check if the user has already reviewed this product
+        // C. Check if the user has already submitted a review for this product
         const existingReview = await Review.findOne({ productId, userId: req.user._id });
         if (existingReview) {
             res.status(400).json({ message: 'You have already reviewed this product.' });
             return;
         }
 
-        // 3. (Optional) Check if user has purchased this product to set isVerifiedPurchase
-        // This requires custom logic to check against an Order model.
-        // const isVerified = await checkIfUserPurchased(req.user._id, productId);
-
+        // D. Create and save the new review
         const review = new Review({
             productId,
             userId: req.user._id,
             rating,
             comment,
-            isVerifiedPurchase: false, // Defaulting to false, implement your own logic
-            status: 'pending', // Default new reviews to 'pending' for admin approval
+            // 👈 **3. Automatically set isVerifiedPurchase to true**
+            isVerifiedPurchase: true,
+            status: 'pending', // Default to pending for admin approval
         });
 
         const createdReview = await review.save();
+        
+        // (Optional but recommended): After saving the review, you might want to
+        // update the average rating on the Product model itself.
+
         res.status(201).json(createdReview);
+
     } catch (error: any) {
         console.error('[Review Controller] Create Review Error:', error.message);
         if (error.name === 'ValidationError') {
@@ -62,7 +80,6 @@ export const createReview = async (req: AuthRequest, res: Response, next: NextFu
         }
     }
 };
-
 /**
  * @desc    Get all active reviews for a specific product
  * @route   GET /api/products/:productId/reviews

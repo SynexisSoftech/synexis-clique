@@ -18,6 +18,11 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
+      // --- NEW: Check if the user is blocked ---
+    if (req.user.isBlocked) {
+      res.status(403).json({ message: 'Sorry, your account is blocked at the moment. You cannot create orders. Please contact support.' });
+      return;
+    }
 
     if (!items || items.length === 0) {
       res.status(400).json({ message: 'Cannot create an order with no items' });
