@@ -1,415 +1,243 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
-import {
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Send,
-  CheckCircle,
-  Facebook,
-  Instagram,
-  Twitter,
-  Linkedin,
-  Loader2,
-} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
-import Image from "next/image"
-import Footer from "../components/footer/footer"
-import Navbar from "../components/navbar/navbar"
-import { getPublicContactInfo, type PublicContactInfo } from "../../../service/public/publicContactInfoService"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { MoreHorizontal, Eye, MessageSquare, Trash2, Loader2, RefreshCw } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils" // Assuming you have a utility for conditional classnames
 
-const queryTypes = [
-  { value: "GENERAL_QUERY", label: "General Query" },
-  { value: "ACCOUNT_HELP", label: "Account Help" },
-  { value: "DELIVERY_OFFERS", label: "Delivery & Offers" },
-  { value: "PAYMENT_ISSUES", label: "Payment Issues" },
-  { value: "FEEDBACK", label: "Feedback" },
-  { value: "OTHER", label: "Other" },
-]
+// Import the service and its types
+import {
+  adminContactUsService,
+  IContactMessage,
+  ContactQueryStatus,
+} from "../../../service/admincontact"
 
-export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    queryType: "",
-    description: "",
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [contactInfo, setContactInfo] = useState<PublicContactInfo | null>(null)
-  const [isLoadingContactInfo, setIsLoadingContactInfo] = useState(true)
-  const [contactInfoError, setContactInfoError] = useState<string | null>(null)
+export default function ContactsPage() {
+  const [contacts, setContacts] = useState<IContactMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  // New state for filtering contacts by status
+  const [filterStatus, setFilterStatus] = useState<ContactQueryStatus | null>(null)
 
-  // Fetch contact information on component mount
+  // Fetch contacts whenever the filterStatus changes
   useEffect(() => {
-    const fetchContactInfo = async () => {
-      try {
-        setIsLoadingContactInfo(true)
-        setContactInfoError(null)
-        const data = await getPublicContactInfo()
-        setContactInfo(data)
-      } catch (error) {
-        console.error("Failed to fetch contact info:", error)
-        setContactInfoError("Failed to load contact information")
-        // Set fallback data
-        setContactInfo({
-          phoneNumbers: [
-            { label: "Main", number: "+1 (555) 123-4567" },
-            { label: "Support", number: "+1 (555) 987-6543" },
-          ],
-          emails: [
-            { label: "Support", email: "support@fashionstore.com" },
-            { label: "General", email: "hello@fashionstore.com" },
-          ],
-          locations: [
-            {
-              label: "Main Office",
-              addressLine1: "123 Fashion Street",
-              city: "New York",
-              state: "NY",
-              postalCode: "10001",
-            },
-          ],
-        })
-      } finally {
-        setIsLoadingContactInfo(false)
-      }
+    fetchContacts()
+  }, [filterStatus]) // Dependency array now includes filterStatus
+
+  const fetchContacts = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      // Pass the filterStatus to the service call
+      const response = await adminContactUsService.getMessages(
+        1,
+        100,
+        filterStatus !== null ? filterStatus : undefined // Only pass status if it's not null
+      );
+      setContacts(response.messages)
+    } catch (err: any) {
+      console.error("Error fetching contacts:", err)
+      setError(err.message || "Failed to fetch contact messages.")
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchContactInfo()
-  }, [])
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  const handleDeleteContact = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this contact message? This action cannot be undone.")) {
+      return;
+    }
+    try {
+      await adminContactUsService.deleteMessage(id);
+      setContacts(prevContacts => prevContacts.filter(contact => contact._id !== id));
+      // Optionally show a success toast/message
+    } catch (err: any) {
+      console.error("Error deleting contact:", err);
+      setError(err.message || "Failed to delete contact message.");
+    }
+  };
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    console.log("Form submitted:", formData)
-    setIsSubmitting(false)
-    setIsSubmitted(true)
-
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setIsSubmitted(false)
-      setFormData({
-        name: "",
-        email: "",
-        queryType: "",
-        description: "",
-      })
-    }, 3000)
+  const getStatusBadgeVariant = (status: ContactQueryStatus) => {
+    switch (status) {
+      case ContactQueryStatus.UNREAD:
+        return "destructive"
+      case ContactQueryStatus.PENDING:
+        return "default"
+      case ContactQueryStatus.RESOLVED:
+        return "success"
+      case ContactQueryStatus.READ:
+        return "outline"
+      case ContactQueryStatus.SPAM:
+        return "secondary"
+      default:
+        return "outline"
+    }
   }
 
-  const formatAddress = (location: any) => {
-    const parts = [
-      location.addressLine1,
-      location.addressLine2,
-      `${location.city}, ${location.state} ${location.postalCode}`,
-    ].filter(Boolean)
-    return parts
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleFilterClick = (status: ContactQueryStatus | null) => {
+    // If clicking the currently active filter, reset to show all
+    if (filterStatus === status) {
+      setFilterStatus(null);
+    } else {
+      setFilterStatus(status);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-8 w-8 text-primary mx-auto" />
+            <p className="mt-2 text-muted-foreground">Loading contacts...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-white">
-        {/* Hero Section with Single Image */}
-        <section className="relative h-[40vh] md:h-[50vh] overflow-hidden">
-          <Image
-            src="/placeholder.svg?height=800&width=1600&text=Contact+Us"
-            alt="Contact us"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#6F4E37]/90 to-[#6F4E37]/70" />
-          <div className="absolute inset-0 flex items-center">
-            <div className="container mx-auto px-4">
-              <div className="max-w-3xl">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">Get in Touch</h1>
-                <p className="text-lg md:text-xl text-white/90 max-w-xl">
-                  We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Content */}
-        <section className="py-16 md:py-24 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="grid lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
-              {/* Contact Form - Takes more space */}
-              <div className="lg:col-span-3">
-                <Card className="shadow-lg border-0 overflow-hidden">
-                  <div className="bg-[#6F4E37] p-6 text-white">
-                    <h2 className="text-2xl font-bold">Send us a Message</h2>
-                    <p className="text-white/80 mt-1">We're here to help you</p>
-                  </div>
-
-                  <CardContent className="p-6 md:p-8">
-                    {isSubmitted ? (
-                      <div className="text-center py-12">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <CheckCircle className="h-8 w-8 text-green-600" />
-                        </div>
-                        <h3 className="text-2xl font-semibold text-gray-900 mb-2">Message Sent!</h3>
-                        <p className="text-gray-600">Thank you for contacting us. We'll get back to you soon.</p>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                              Full Name *
-                            </Label>
-                            <Input
-                              id="name"
-                              type="text"
-                              value={formData.name}
-                              onChange={(e) => handleInputChange("name", e.target.value)}
-                              className="h-11 border-gray-200 focus:border-[#6F4E37] focus:ring-[#6F4E37]"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                              Email Address *
-                            </Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => handleInputChange("email", e.target.value)}
-                              className="h-11 border-gray-200 focus:border-[#6F4E37] focus:ring-[#6F4E37]"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="queryType" className="text-sm font-medium text-gray-700">
-                            Query Type *
-                          </Label>
-                          <Select
-                            value={formData.queryType}
-                            onValueChange={(value) => handleInputChange("queryType", value)}
-                          >
-                            <SelectTrigger className="h-11 border-gray-200 focus:border-[#6F4E37] focus:ring-[#6F4E37]">
-                              <SelectValue placeholder="Select query type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {queryTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {type.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-                            Message *
-                          </Label>
-                          <Textarea
-                            id="description"
-                            value={formData.description}
-                            onChange={(e) => handleInputChange("description", e.target.value)}
-                            className="min-h-32 border-gray-200 focus:border-[#6F4E37] focus:ring-[#6F4E37] resize-none"
-                            placeholder="Please describe your query in detail..."
-                            required
-                          />
-                        </div>
-
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full h-11 bg-[#6F4E37] hover:bg-[#5d4230] text-white font-medium transition-colors"
-                        >
-                          {isSubmitting ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Sending...
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Send className="h-4 w-4" />
-                              Send Message
-                            </div>
-                          )}
-                        </Button>
-                      </form>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Contact Information - Takes less space */}
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="shadow-lg border-0 overflow-hidden">
-                  <div className="bg-[#6F4E37] p-6 text-white">
-                    <h2 className="text-xl font-bold">Contact Information</h2>
-                    <p className="text-white/80 mt-1">Reach out to us directly</p>
-                  </div>
-                  <CardContent className="p-6 space-y-6">
-                    {isLoadingContactInfo ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-[#6F4E37]" />
-                        <span className="ml-2 text-gray-600">Loading contact information...</span>
-                      </div>
-                    ) : (
-                      <>
-                        {contactInfoError && (
-                          <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
-                            {contactInfoError} - Showing fallback information
-                          </div>
-                        )}
-
-                        {/* Email Section */}
-                        {contactInfo?.emails && contactInfo.emails.length > 0 && (
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Mail className="h-5 w-5 text-[#6F4E37]" />
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-gray-900 mb-1">Email</h3>
-                              {contactInfo.emails.map((email, index) => (
-                                <p key={index} className="text-gray-600">
-                                  {email.email}
-                                  {email.label && email.label !== "General" && (
-                                    <span className="text-xs text-gray-500 ml-1">({email.label})</span>
-                                  )}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Phone Section */}
-                        {contactInfo?.phoneNumbers && contactInfo.phoneNumbers.length > 0 && (
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Phone className="h-5 w-5 text-[#6F4E37]" />
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-gray-900 mb-1">Phone</h3>
-                              {contactInfo.phoneNumbers.map((phone, index) => (
-                                <p key={index} className="text-gray-600">
-                                  {phone.number}
-                                  {phone.label && <span className="text-xs text-gray-500 ml-1">({phone.label})</span>}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Location Section */}
-                        {contactInfo?.locations && contactInfo.locations.length > 0 && (
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                              <MapPin className="h-5 w-5 text-[#6F4E37]" />
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-gray-900 mb-1">Address</h3>
-                              {contactInfo.locations.map((location, index) => (
-                                <div key={index} className="mb-2 last:mb-0">
-                                  {location.label && location.label !== "Main Office" && (
-                                    <p className="text-xs text-gray-500 font-medium">{location.label}</p>
-                                  )}
-                                  {formatAddress(location).map((line, lineIndex) => (
-                                    <p key={lineIndex} className="text-gray-600">
-                                      {line}
-                                    </p>
-                                  ))}
-                                  {location.googleMapsUrl && (
-                                    <a
-                                      href={location.googleMapsUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[#6F4E37] text-sm hover:underline"
-                                    >
-                                      View on Google Maps
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Business Hours - Static for now */}
-                        <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 bg-[#6F4E37]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Clock className="h-5 w-5 text-[#6F4E37]" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-gray-900 mb-1">Hours</h3>
-                            <p className="text-gray-600">Mon - Fri: 9:00 AM - 6:00 PM</p>
-                            <p className="text-gray-600">Sat - Sun: 10:00 AM - 4:00 PM</p>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border-0">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Connect With Us</h3>
-                    <div className="flex space-x-4">
-                      <a
-                        href="#"
-                        className="w-10 h-10 bg-[#6F4E37] text-white rounded-full flex items-center justify-center hover:bg-[#5d4230] transition-colors"
-                      >
-                        <Facebook className="h-5 w-5" />
-                        <span className="sr-only">Facebook</span>
-                      </a>
-                      <a
-                        href="#"
-                        className="w-10 h-10 bg-[#6F4E37] text-white rounded-full flex items-center justify-center hover:bg-[#5d4230] transition-colors"
-                      >
-                        <Instagram className="h-5 w-5" />
-                        <span className="sr-only">Instagram</span>
-                      </a>
-                      <a
-                        href="#"
-                        className="w-10 h-10 bg-[#6F4E37] text-white rounded-full flex items-center justify-center hover:bg-[#5d4230] transition-colors"
-                      >
-                        <Twitter className="h-5 w-5" />
-                        <span className="sr-only">Twitter</span>
-                      </a>
-                      <a
-                        href="#"
-                        className="w-10 h-10 bg-[#6F4E37] text-white rounded-full flex items-center justify-center hover:bg-[#5d4230] transition-colors"
-                      >
-                        <Linkedin className="h-5 w-5" />
-                        <span className="sr-only">LinkedIn</span>
-                      </a>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </section>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Contact Messages</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage customer inquiries and support requests.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          {/* All Messages Button */}
+          <Button
+            variant={filterStatus === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleFilterClick(null)}
+            className={cn(filterStatus === null ? "ring-2 ring-offset-2 ring-primary" : "")}
+          >
+            All ({contacts.length})
+          </Button>
+          {/* Unread Button */}
+          <Button
+            variant={filterStatus === ContactQueryStatus.UNREAD ? "destructive" : "outline"}
+            size="sm"
+            onClick={() => handleFilterClick(ContactQueryStatus.UNREAD)}
+            className={cn(filterStatus === ContactQueryStatus.UNREAD ? "ring-2 ring-offset-2 ring-destructive" : "")}
+          >
+            New ({contacts.filter((c) => c.status === ContactQueryStatus.UNREAD).length})
+          </Button>
+          {/* Read Button */}
+          <Button
+            variant={filterStatus === ContactQueryStatus.READ ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleFilterClick(ContactQueryStatus.READ)}
+            className={cn(filterStatus === ContactQueryStatus.READ ? "ring-2 ring-offset-2 ring-primary" : "")}
+          >
+            Read ({contacts.filter((c) => c.status === ContactQueryStatus.READ).length})
+          </Button>
+          {/* Other statuses can be added similarly */}
+          <Button variant="outline" size="sm" onClick={fetchContacts} disabled={isLoading}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
 
-      <Footer />
-    </>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline ml-2">{error}</span>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">All Contact Messages</CardTitle>
+          <CardDescription className="text-sm">Customer inquiries and support requests.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">Contact</TableHead>
+                  <TableHead className="hidden sm:table-cell min-w-[200px]">Query Type</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contacts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No contact messages found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  contacts.map((contact) => (
+                    <TableRow key={contact._id}>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{contact.name}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{contact.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <p className="text-sm truncate max-w-[200px]">{contact.queryType}</p>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        {formatDate(contact.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(contact.status)} className="text-xs">
+                          {contact.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => alert(`Viewing contact: ${contact._id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => alert(`Replying to contact: ${contact._id}`)}>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Reply
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteContact(contact._id)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

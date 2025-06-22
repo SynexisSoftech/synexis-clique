@@ -9,7 +9,7 @@ export interface IContactUs extends Document {
   phone?: string; // Optional
   queryType: ContactQueryType;
   description: string;
-  status: ContactQueryStatus;
+  status: ContactQueryStatus; // Now uses the updated enum
   createdAt: Date;
   updatedAt: Date;
   adminNotes?: string; // Optional field for admins to add notes
@@ -20,7 +20,7 @@ const ContactUsSchema = new Schema<IContactUs>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User', // Assuming you have a 'User' model
-      required: false, // Make it optional
+      required: false,
     },
     name: {
       type: String,
@@ -39,13 +39,11 @@ const ContactUsSchema = new Schema<IContactUs>(
     phone: {
       type: String,
       trim: true,
-      required: false, // Making phone optional as per your description
-      // You might want to add a regex for phone number validation depending on your needs
-      // match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number.']
+      required: false,
     },
     queryType: {
       type: String,
-      enum: Object.values(ContactQueryType), // Use enum values
+      enum: Object.values(ContactQueryType), // Use enum values from enums.ts
       required: [true, 'Query type is required.'],
     },
     description: {
@@ -57,8 +55,8 @@ const ContactUsSchema = new Schema<IContactUs>(
     },
     status: {
       type: String,
-      enum: Object.values(ContactQueryStatus), // Use enum values
-      default: ContactQueryStatus.UNREAD, // Default status
+      enum: Object.values(ContactQueryStatus), // Use the updated, more descriptive enum
+      default: ContactQueryStatus.UNREAD,     // Default status remains UNREAD
       required: true,
     },
     adminNotes: {
@@ -77,7 +75,6 @@ ContactUsSchema.index({ status: 1 });
 ContactUsSchema.index({ email: 1 });
 ContactUsSchema.index({ userId: 1 });
 ContactUsSchema.index({ queryType: 1 });
-
 
 const ContactUsModel = model<IContactUs>('ContactUs', ContactUsSchema);
 

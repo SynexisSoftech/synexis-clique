@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes'; // ✅ Import auth routes
 import { setupSwagger } from '../swagger'; // ✅ Import Swagger setup
 import cors from 'cors';
-import contactUsRoutes from './routes/contactus.routes';
+
  // Add this line to import category routes
 import adminRouter from './routes/admin/admin.routes';
 import publicCategoryRoutes from './routes/public/publicCategory.routes';
@@ -26,6 +26,8 @@ import adminCartRoutes from './routes/admin/cart.route';
 import userRoutes from './routes/admin/user.routes';
 import adminShippingRoutes from './routes/admin/shipping.routes';
 import publicShippingRoutes from './routes/public/shipping.routes';
+import adminContactRoutes from './routes/admin/adminContact.routes';
+import publicContactRoutes from './routes/public/publicContact.routes';
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -54,7 +56,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/contact', contactUsRoutes);
+
 app.use('/api/admin', adminRouter);
 app.use('/api/public', publicCategoryRoutes);
 app.use('/api/public/subcategories', publicSubcategoryRoutes);
@@ -64,6 +66,8 @@ app.use('/api/social-links', publicSocialLinksRoutes);
 app.use('/api/admin/hero-slides', adminHeroRoutes);
 app.use('/api/admin/contact-info', contactInfoAdminRoutes);
 app.use('/api/contact-info', publicContactInfoRoutes);
+app.use('/api/admin/contact-us', adminContactRoutes);
+app.use('/api/contact-us', publicContactRoutes);
 
 // For Public data fetching (e.g., /api/hero-slides)
 app.use('/api/hero-slides', publicHeroRoutes);
