@@ -151,22 +151,8 @@ const apiClient = axios.create({
 
 // Function to get token from localStorage or wherever you store it
 const getStoredToken = (): string | null => {
-  if (typeof window !== "undefined") {
-    // Try to get token from localStorage
-    const user = localStorage.getItem("user")
-    if (user) {
-      try {
-        const userData = JSON.parse(user)
-        return userData.token || userData.accessToken || null
-      } catch (error) {
-        console.error("Error parsing user data:", error)
-        return null
-      }
-    }
-
-    // Alternative: if you store token separately
-    return localStorage.getItem("token") || localStorage.getItem("accessToken")
-  }
+  // We don't store access tokens in localStorage anymore for security
+  // Tokens are stored in memory only and refreshed via HttpOnly cookies
   return null
 }
 
@@ -236,16 +222,8 @@ apiClient.interceptors.response.use(
 
         // Update stored token
         if (typeof window !== "undefined") {
-          const user = localStorage.getItem("user")
-          if (user) {
-            try {
-              const userData = JSON.parse(user)
-              userData.token = newAccessToken
-              localStorage.setItem("user", JSON.stringify(userData))
-            } catch (error) {
-              console.error("Error updating stored user data:", error)
-            }
-          }
+          // We don't store access tokens in localStorage anymore
+          // The token is only stored in memory via updateApiToken
         }
 
         // Update the original failed request's Authorization header and re-send it

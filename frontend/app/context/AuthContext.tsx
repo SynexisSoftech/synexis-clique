@@ -109,7 +109,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (fetchedUser?.id) {
           setUser(fetchedUser)
-          localStorage.setItem("user", JSON.stringify(fetchedUser))
+          // Store only user data, not the access token
+          localStorage.setItem("user", JSON.stringify({
+            id: fetchedUser.id,
+            email: fetchedUser.email,
+            role: fetchedUser.role,
+            username: fetchedUser.username,
+            firstName: fetchedUser.firstName,
+            lastName: fetchedUser.lastName,
+            photoURL: fetchedUser.photoURL
+          }))
           setIsAuthenticated(true)
           setError(null)
         } else {
@@ -155,7 +164,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         inMemoryToken = accessToken
         updateApiToken(accessToken)
         setUser(user)
-        localStorage.setItem("user", JSON.stringify(user))
+        // Store only user data, not the access token
+        localStorage.setItem("user", JSON.stringify({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          photoURL: user.photoURL
+        }))
         setIsAuthenticated(true)
         setError(null)
 

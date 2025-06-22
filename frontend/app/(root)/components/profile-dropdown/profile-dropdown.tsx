@@ -148,12 +148,7 @@ export default function ProfileDropdown() {
             </Link>
           </DropdownMenuItem> */}
 
-          <DropdownMenuItem className="focus:bg-[#6F4E37]/5 rounded-lg" asChild>
-            <Link href="/settings" className="flex items-center gap-3 px-2 py-2" onClick={() => setOpen(false)}>
-              <Settings className="h-4 w-4 text-[#6F4E37]" />
-              <span className="font-cormorant">Settings</span>
-            </Link>
-          </DropdownMenuItem>
+      
 
           {user.role === "admin" && (
             <>

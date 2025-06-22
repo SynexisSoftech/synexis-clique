@@ -384,4 +384,11 @@ router.post(
     AuthController.refreshTokenHandler
 );
 
+// --- Logout ---
+// This route clears the refresh token cookie
+router.post(
+    '/logout',
+    AuthController.logout
+);
+
 export default router;
