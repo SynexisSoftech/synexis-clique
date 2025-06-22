@@ -8,9 +8,17 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[A-Za-z\d
 
 export const signupValidationRules = (): ValidationChain[] => [
   body('username')
+    .optional()
     .trim()
-    .notEmpty().withMessage('Username is required.')
-    .isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters.'),
+    .isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters if provided.'),
+  body('firstName')
+    .trim()
+    .notEmpty().withMessage('First name is required.')
+    .isLength({ min: 2, max: 50 }).withMessage('First name must be 2-50 characters.'),
+  body('lastName')
+    .trim()
+    .notEmpty().withMessage('Last name is required.')
+    .isLength({ min: 2, max: 50 }).withMessage('Last name must be 2-50 characters.'),
   body('email')
     .trim()
     .notEmpty().withMessage('Email is required.')

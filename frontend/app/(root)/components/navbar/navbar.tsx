@@ -99,7 +99,9 @@ export default function Navbar() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#6F4E37] truncate font-cormorant">
-                            {user.username || "User"}
+                            {user.firstName && user.lastName 
+                              ? `${user.firstName} ${user.lastName}` 
+                              : user.username || "User"}
                           </p>
                           <p className="text-xs text-[#6F4E37]/60 truncate">{user.email}</p>
                           <p className="text-xs text-[#6F4E37]/40 capitalize">{user.role}</p>

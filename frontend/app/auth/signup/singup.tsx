@@ -57,11 +57,15 @@ export default function SignupForm() {
     const email = formData.get("email") as string // Get email from form data
     const password = formData.get("password") as string
     const username = formData.get("username") as string
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
 
     const userData = {
       email,
       password,
       username,
+      firstName,
+      lastName,
       photoBase64: profileImage,
     }
 
@@ -181,10 +185,52 @@ export default function SignupForm() {
                 </div>
               </div>
 
+              {/* First Name Field */}
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-3">
+                  First Name
+                </Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-[#6F4E37] transition-colors duration-200" />
+                  </div>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    placeholder="Enter your first name"
+                    className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Last Name Field */}
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-3">
+                  Last Name
+                </Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-[#6F4E37] transition-colors duration-200" />
+                  </div>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    placeholder="Enter your last name"
+                    className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
               {/* Username Field */}
               <div className="space-y-2">
                 <Label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-3">
-                  Username
+                  Username (Optional)
                 </Label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -194,12 +240,14 @@ export default function SignupForm() {
                     id="username"
                     name="username"
                     type="text"
-                    placeholder="Choose a username"
+                    placeholder="Choose a username (or leave empty to auto-generate)"
                     className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    required
                     disabled={isLoading}
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty to auto-generate from your first and last name
+                </p>
               </div>
 
               {/* Password Field */}

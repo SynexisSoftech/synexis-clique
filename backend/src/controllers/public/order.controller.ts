@@ -12,7 +12,20 @@ import crypto from 'crypto';
  */
 export const createOrder = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { items } = req.body as { items: { productId: string; quantity: number }[] };
+    const { items, shippingInfo } = req.body as { 
+      items: { productId: string; quantity: number }[];
+      shippingInfo: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+        address: string;
+        province: string;
+        city: string;
+        postalCode: string;
+        country: string;
+      };
+    };
 
     if (!req.user) {
       res.status(401).json({ message: 'Unauthorized' });
@@ -26,6 +39,11 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
 
     if (!items || items.length === 0) {
       res.status(400).json({ message: 'Cannot create an order with no items' });
+      return;
+    }
+
+    if (!shippingInfo) {
+      res.status(400).json({ message: 'Shipping information is required' });
       return;
     }
 
@@ -47,9 +65,23 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       });
     }
 
-    const shippingCost = subtotal > 0 ? 500 : 0;
+    // Get shipping charge from the shipping service
+    const { Province } = require('../../models/shipping.model');
+    const province = await Province.findOne({
+      'cities.name': shippingInfo.city,
+      'cities.isActive': true
+    });
+
+    let shippingCharge = 0;
+    if (province) {
+      const city = province.cities.find((c: any) => c.name === shippingInfo.city && c.isActive);
+      if (city) {
+        shippingCharge = city.shippingCharge;
+      }
+    }
+
     const taxAmount = Math.round(subtotal * 0.13); 
-    const totalAmount = subtotal + shippingCost + taxAmount;
+    const totalAmount = subtotal + shippingCharge + taxAmount;
     const transaction_uuid = crypto.randomUUID();
     const product_code = "EPAYTEST"; // This is the correct code for development
     
@@ -72,7 +104,10 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       transaction_uuid,
       amount: subtotal,
       totalAmount: totalAmount,
-      status: 'PENDING'
+      status: 'PENDING',
+      shippingInfo,
+      shippingCharge,
+      tax: taxAmount
     });
     
     res.json({
@@ -118,7 +153,7 @@ export const getMyOrders = async (req: AuthRequest, res: Response, next: NextFun
 
     const count = await Order.countDocuments(query);
     const orders = await Order.find(query)
-      .populate('productId', 'title images originalPrice discountPrice') // Populate essential product info
+      .populate('items.productId', 'title images originalPrice discountPrice') // Populate product info for each item
       .select('-userId') // Don't need to return the user's own ID back to them
       .limit(pageSize)
       .skip(pageSize * (page - 1))
@@ -157,7 +192,7 @@ export const getMyOrderById = async (req: AuthRequest, res: Response, next: Next
       // Crucially, we find by both order ID and the logged-in user's ID
       // to ensure a user cannot access another user's order.
       const order = await Order.findOne({ _id: req.params.id, userId: req.user._id })
-        .populate('productId') // Get full product details for the order page
+        .populate('items.productId') // Get full product details for each item
         .populate('userId', 'username email'); // Maybe for showing shipping details later
 
       if (order) {

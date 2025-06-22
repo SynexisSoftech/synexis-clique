@@ -11,7 +11,9 @@ export type UserRole = 'buyer' | 'admin';
  */
 export interface IUser {
   _id: string;
-  username: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   photoURL: string;
   isVerified: boolean;

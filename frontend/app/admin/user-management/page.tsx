@@ -56,7 +56,10 @@ interface ApiError {
 }
 
 // Get user initials safely
-const getUserInitials = (username: string | undefined | null) => {
+const getUserInitials = (username: string | undefined | null, firstName?: string, lastName?: string) => {
+  if (firstName && lastName) {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
   if (!username || typeof username !== "string") {
     return "U"
   }
@@ -66,6 +69,13 @@ const getUserInitials = (username: string | undefined | null) => {
     .join("")
     .toUpperCase()
     .slice(0, 2)
+}
+
+const getDisplayName = (firstName?: string, lastName?: string, username?: string) => {
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`
+  }
+  return username || "Unknown User"
 }
 
 // Enhanced Mobile User Card Component with better error handling
@@ -99,14 +109,14 @@ const MobileUserCard = ({
           <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
             <AvatarImage src={user.photoURL || "/placeholder.svg"} alt={user.username || "User"} />
             <AvatarFallback className="bg-rose-100 text-rose-700 text-sm">
-              {getUserInitials(user.username)}
+              {getUserInitials(user.username, user.firstName, user.lastName)}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1 min-w-0 space-y-2 max-w-[calc(100%-100px)]">
             <div className="flex items-start justify-between gap-2 w-full">
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-sm sm:text-base truncate">{user.username || "Unknown User"}</h3>
+                <h3 className="font-semibold text-sm sm:text-base truncate">{getDisplayName(user.firstName, user.lastName, user.username)}</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
@@ -380,6 +390,8 @@ export default function AdminUsersManagementPage() {
       const query = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (user) =>
+          (user.firstName && user.firstName.toLowerCase().includes(query)) ||
+          (user.lastName && user.lastName.toLowerCase().includes(query)) ||
           (user.username && user.username.toLowerCase().includes(query)) ||
           (user.email && user.email.toLowerCase().includes(query)) ||
           user._id.toLowerCase().includes(query),
@@ -471,10 +483,12 @@ export default function AdminUsersManagementPage() {
   const handleExportUsers = () => {
     try {
       const csvContent = [
-        ["ID", "Username", "Email", "Role", "Status", "Verified", "Created At"].join(","),
+        ["ID", "First Name", "Last Name", "Username", "Email", "Role", "Status", "Verified", "Created At"].join(","),
         ...filteredUsers.map((user) =>
           [
             user._id,
+            user.firstName || "",
+            user.lastName || "",
             user.username || "Unknown",
             user.email || "No email",
             user.role,
@@ -808,12 +822,12 @@ export default function AdminUsersManagementPage() {
                         alt={selectedUser.username || "User"}
                       />
                       <AvatarFallback className="bg-rose-100 text-rose-700 text-lg">
-                        {getUserInitials(selectedUser.username)}
+                        {getUserInitials(selectedUser.username, selectedUser.firstName, selectedUser.lastName)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-base sm:text-lg font-semibold truncate">
-                        {selectedUser.username || "Unknown User"}
+                        {getDisplayName(selectedUser.firstName, selectedUser.lastName, selectedUser.username)}
                       </h3>
                       <p className="text-sm text-muted-foreground truncate">{selectedUser.email}</p>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">

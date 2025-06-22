@@ -21,11 +21,16 @@ import Footer from "../components/footer/footer"
 import { useCart } from "@/hooks/useCart"
 import { useAuth } from "../../context/AuthContext"
 import { orderService } from "../../../service/public/orderService"
+import { shippingService, type IProvince } from "../../../service/shippingService"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 interface ShippingInfo {
-  fullName: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
   address: string
+  province: string
   city: string
   postalCode: string
   country: string
@@ -33,6 +38,13 @@ interface ShippingInfo {
 
 interface BillingInfo extends ShippingInfo {
   sameAsShipping: boolean
+}
+
+interface ICity {
+  _id?: string
+  name: string
+  shippingCharge: number
+  isActive: boolean
 }
 
 // Helper function to format price
@@ -73,25 +85,35 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("esewa")
   const [mounted, setMounted] = useState(false)
+  const [provinces, setProvinces] = useState<IProvince[]>([])
+  const [selectedProvince, setSelectedProvince] = useState<string>("")
+  const [availableCities, setAvailableCities] = useState<ICity[]>([])
+  const [selectedCity, setSelectedCity] = useState<string>("")
+  const [shippingCharge, setShippingCharge] = useState<number>(0)
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     address: "",
+    province: "",
     city: "",
     postalCode: "",
     country: "Nepal",
   })
   const [billingInfo, setBillingInfo] = useState<BillingInfo>({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     address: "",
+    province: "",
     city: "",
     postalCode: "",
     country: "Nepal",
     sameAsShipping: true,
   })
+  const [isLoadingShipping, setIsLoadingShipping] = useState(false)
 
   // Handle client-side mounting
   useEffect(() => {
@@ -101,14 +123,21 @@ export default function CheckoutPage() {
   // Update form with user data when user loads
   useEffect(() => {
     if (user) {
+      // Create full name from firstName and lastName, fallback to username if names not available
+      const fullName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.username || user.email || ""
+      
       setShippingInfo((prev) => ({
         ...prev,
-        fullName: user.email || prev.fullName,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
         email: user.email || prev.email,
       }))
       setBillingInfo((prev) => ({
         ...prev,
-        fullName: user.email || prev.fullName,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
         email: user.email || prev.email,
       }))
     }
@@ -132,6 +161,57 @@ export default function CheckoutPage() {
       return
     }
   }, [mounted, isAuthenticated, cart, authLoading, cartLoading, router])
+
+  // Fetch shipping data on component mount
+  useEffect(() => {
+    const fetchShippingData = async () => {
+      try {
+        setIsLoadingShipping(true)
+        const response = await shippingService.getProvincesForCheckout()
+        if (response.success) {
+          setProvinces(response.data)
+        }
+      } catch (error) {
+        console.error("Error fetching shipping data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load shipping information",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingShipping(false)
+      }
+    }
+
+    fetchShippingData()
+  }, [toast])
+
+  // Update available cities when province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      const province = provinces.find(p => p.name === selectedProvince)
+      if (province) {
+        setAvailableCities(province.cities)
+        setSelectedCity("")
+        setShippingCharge(0)
+      }
+    } else {
+      setAvailableCities([])
+      setSelectedCity("")
+      setShippingCharge(0)
+    }
+  }, [selectedProvince, provinces])
+
+  // Update shipping charge when city changes
+  useEffect(() => {
+    if (selectedCity && availableCities.length > 0) {
+      const city = availableCities.find(c => c.name === selectedCity)
+      if (city) {
+        setShippingCharge(city.shippingCharge)
+        setShippingInfo(prev => ({ ...prev, city: city.name, province: selectedProvince }))
+      }
+    }
+  }, [selectedCity, availableCities, selectedProvince])
 
   // Don't render anything until mounted (prevents hydration issues)
   if (!mounted) {
@@ -186,9 +266,8 @@ export default function CheckoutPage() {
       return total + price * item.quantity
     }, 0) || 0
 
-  const shipping = subtotal > 0 ? 500 : 0
-  const tax = Math.round(subtotal * 0.13) // 13% tax
-  const total = subtotal + shipping + tax
+  const shipping = shippingCharge
+  const total = subtotal + shipping
 
   const handleShippingChange = (field: keyof ShippingInfo, value: string) => {
     setShippingInfo((prev) => ({ ...prev, [field]: value }))
@@ -212,7 +291,7 @@ export default function CheckoutPage() {
   }
 
   const validateForm = (): boolean => {
-    const requiredFields = ["fullName", "email", "phone", "address", "city"]
+    const requiredFields = ["firstName", "lastName", "email", "phone", "address", "province", "city"]
 
     for (const field of requiredFields) {
       if (!shippingInfo[field as keyof ShippingInfo]) {
@@ -283,6 +362,17 @@ export default function CheckoutPage() {
           productId: item.productId._id,
           quantity: item.quantity,
         })),
+        shippingInfo: {
+          firstName: shippingInfo.firstName,
+          lastName: shippingInfo.lastName,
+          email: shippingInfo.email,
+          phone: shippingInfo.phone,
+          address: shippingInfo.address,
+          province: shippingInfo.province,
+          city: shippingInfo.city,
+          postalCode: shippingInfo.postalCode,
+          country: shippingInfo.country,
+        },
       };
 
       console.log("Sending order data to backend:", orderData);
@@ -349,12 +439,21 @@ export default function CheckoutPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="fullName">Full Name *</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="fullName"
-                      value={shippingInfo.fullName}
-                      onChange={(e) => handleShippingChange("fullName", e.target.value)}
-                      placeholder="Enter your full name"
+                      id="firstName"
+                      value={shippingInfo.firstName}
+                      onChange={(e) => handleShippingChange("firstName", e.target.value)}
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={shippingInfo.lastName}
+                      onChange={(e) => handleShippingChange("lastName", e.target.value)}
+                      placeholder="Enter your last name"
                     />
                   </div>
                   <div>
@@ -376,15 +475,6 @@ export default function CheckoutPage() {
                       placeholder="Enter your phone number"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={shippingInfo.country}
-                      onChange={(e) => handleShippingChange("country", e.target.value)}
-                      placeholder="Country"
-                    />
-                  </div>
                 </div>
                 <div>
                   <Label htmlFor="address">Address *</Label>
@@ -397,13 +487,41 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <Label htmlFor="province">Province *</Label>
+                    <Select value={selectedProvince} onValueChange={setSelectedProvince}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select province" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provinces.map((province) => (
+                          <SelectItem key={province._id} value={province.name}>
+                            {province.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label htmlFor="city">City *</Label>
-                    <Input
-                      id="city"
-                      value={shippingInfo.city}
-                      onChange={(e) => handleShippingChange("city", e.target.value)}
-                      placeholder="Enter your city"
-                    />
+                    <Select
+                      value={selectedCity}
+                      onValueChange={(value) => {
+                        setSelectedCity(value)
+                        handleShippingChange("city", value)
+                      }}
+                      disabled={!selectedProvince || availableCities.length === 0}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={selectedProvince ? "Select city" : "Select province first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCities.map((city) => (
+                          <SelectItem key={city._id || city.name} value={city.name}>
+                            {city.name} - {formatPrice(city.shippingCharge)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="postalCode">Postal Code</Label>
@@ -412,6 +530,15 @@ export default function CheckoutPage() {
                       value={shippingInfo.postalCode}
                       onChange={(e) => handleShippingChange("postalCode", e.target.value)}
                       placeholder="Enter postal code"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="country">Country</Label>
+                    <Input
+                      id="country"
+                      value={shippingInfo.country}
+                      onChange={(e) => handleShippingChange("country", e.target.value)}
+                      placeholder="Country"
                     />
                   </div>
                 </div>
@@ -437,12 +564,21 @@ export default function CheckoutPage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="billingFullName">Full Name *</Label>
+                        <Label htmlFor="billingFirstName">First Name *</Label>
                         <Input
-                          id="billingFullName"
-                          value={billingInfo.fullName}
-                          onChange={(e) => handleBillingChange("fullName", e.target.value)}
-                          placeholder="Enter full name"
+                          id="billingFirstName"
+                          value={billingInfo.firstName}
+                          onChange={(e) => handleBillingChange("firstName", e.target.value)}
+                          placeholder="Enter first name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="billingLastName">Last Name *</Label>
+                        <Input
+                          id="billingLastName"
+                          value={billingInfo.lastName}
+                          onChange={(e) => handleBillingChange("lastName", e.target.value)}
+                          placeholder="Enter last name"
                         />
                       </div>
                       <div>
@@ -591,11 +727,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Shipping</span>
-                    <span className="text-slate-900">{shipping > 0 ? formatPrice(shipping) : "Free"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Tax (13%)</span>
-                    <span className="text-slate-900">{formatPrice(tax)}</span>
+                    <span className="text-slate-900">
+                      {selectedCity ? `${selectedCity} - ${formatPrice(shipping)}` : "Select city"}
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

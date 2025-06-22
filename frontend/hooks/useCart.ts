@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { type Cart, cartService } from "../service/public/cartService"
+import { type IUserCart, cartService } from "../service/public/cartService"
 import { useAuth } from "@/app/context/AuthContext"
 import { toast } from "@/hooks/use-toast"
 
 export function useCart() {
-  const [cart, setCart] = useState<Cart | null>(null)
+  const [cart, setCart] = useState<IUserCart | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { isAuthenticated } = useAuth()
@@ -91,7 +91,7 @@ export function useCart() {
 
   const getItemQuantity = (productId: string): number => {
     if (!cart || !cart.items) return 0
-    const item = cart.items.find((item) => item.productId === productId)
+    const item = cart.items.find((item) => item.productId._id === productId)
     return item ? item.quantity : 0
   }
 

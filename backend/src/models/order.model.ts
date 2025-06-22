@@ -17,6 +17,19 @@ export interface IOrder extends Document {
   totalAmount: number; // The final grand total
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
   eSewaRefId?: string;
+  shippingInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    province: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  shippingCharge: number;
+  tax: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +92,19 @@ const OrderSchema: Schema<IOrder> = new Schema<IOrder>(
     eSewaRefId: {
       type: String,
     },
+    shippingInfo: {
+      firstName: String,
+      lastName: String,
+      email: String,
+      phone: String,
+      address: String,
+      province: String,
+      city: String,
+      postalCode: String,
+      country: String,
+    },
+    shippingCharge: Number,
+    tax: Number,
   },
   { timestamps: true }
 );

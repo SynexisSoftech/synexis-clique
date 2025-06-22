@@ -5,6 +5,17 @@ export interface CreateOrderRequest {
     productId: string;
     quantity: number;
   }[];
+  shippingInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    province: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
 }
 export interface CreateOrderResponse {
   orderId: string

@@ -61,7 +61,10 @@ export default function ProfileDropdown() {
     }
   }
 
-  const getInitials = (username?: string, email?: string) => {
+  const getInitials = (username?: string, email?: string, firstName?: string, lastName?: string) => {
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+    }
     if (username) {
       return username.slice(0, 2).toUpperCase()
     }
@@ -69,6 +72,13 @@ export default function ProfileDropdown() {
       return email.slice(0, 2).toUpperCase()
     }
     return "U"
+  }
+
+  const getDisplayName = (firstName?: string, lastName?: string, username?: string) => {
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`
+    }
+    return username || "User"
   }
 
   return (
@@ -84,7 +94,7 @@ export default function ProfileDropdown() {
               alt={user.username || user.email}
             />
             <AvatarFallback className="bg-[#6F4E37] text-white text-sm font-medium">
-              {getInitials(user.username, user.email)}
+              {getInitials(user.username, user.email, user.firstName, user.lastName)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -98,12 +108,12 @@ export default function ProfileDropdown() {
                 alt={user.username || user.email}
               />
               <AvatarFallback className="bg-[#6F4E37] text-white font-medium">
-                {getInitials(user.username, user.email)}
+                {getInitials(user.username, user.email, user.firstName, user.lastName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-sm font-medium text-[#6F4E37] truncate font-cormorant">{user.username || "User"}</p>
+                <p className="text-sm font-medium text-[#6F4E37] truncate font-cormorant">{getDisplayName(user.firstName, user.lastName, user.username)}</p>
                 <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs flex items-center gap-1">
                   {getRoleIcon(user.role)}
                   {user.role}

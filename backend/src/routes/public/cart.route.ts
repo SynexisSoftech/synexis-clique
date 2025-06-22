@@ -5,6 +5,7 @@ import {
     addItemToCart,
     removeItemFromCart,
     clearCart,
+    validateCart,
 } from '../../controllers/public/cart.controller'; // Adjust path
 
 const router = express.Router();
@@ -21,5 +22,8 @@ router.route('/items')
 
 router.route('/items/:productId')
     .delete(protect, removeItemFromCart);
+
+// New validation route
+router.post('/validate', protect, validateCart);
 
 export default router;

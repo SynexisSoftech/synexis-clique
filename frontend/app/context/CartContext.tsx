@@ -1,18 +1,19 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { type Cart, cartService } from "../../service/public/cartService"
+import { type IUserCart, cartService } from "../../service/public/cartService"
 import { useAuth } from "./AuthContext"
 import { toast } from "@/hooks/use-toast"
 
 interface CartContextType {
-  cart: Cart | null
+  cart: IUserCart | null
   isLoading: boolean
   error: string | null
-  addToCart: (productId: string, quantity: number) => Promise<Cart>
-  removeFromCart: (productId: string) => Promise<Cart>
+  addToCart: (productId: string, quantity: number) => Promise<IUserCart>
+  removeFromCart: (productId: string) => Promise<IUserCart>
   clearCart: () => Promise<void>
   refetchCart: () => Promise<void>
+  validateCart: () => Promise<any>
   cartItemsCount: number
   getItemQuantity: (productId: string) => number
 }
@@ -24,13 +25,21 @@ interface CartProviderProps {
 }
 
 export function CartProvider({ children }: CartProviderProps) {
-  const [cart, setCart] = useState<Cart | null>(null)
+  const [cart, setCart] = useState<IUserCart | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { isAuthenticated } = useAuth()
 
   const fetchCart = async () => {
     if (!isAuthenticated) {
+      setCart(null)
+      return
+    }
+
+    // Additional check: make sure we have a stored user before making API calls
+    const storedUser = localStorage.getItem("user")
+    if (!storedUser) {
+      console.info("[CartContext] No stored user found, skipping cart fetch.")
       setCart(null)
       return
     }
@@ -50,35 +59,87 @@ export function CartProvider({ children }: CartProviderProps) {
     }
   }
 
-  const addToCart = async (productId: string, quantity: number): Promise<Cart> => {
+  const addToCart = async (productId: string, quantity: number): Promise<IUserCart> => {
     if (!isAuthenticated) {
       throw new Error("User not authenticated")
     }
 
+    // Input validation
+    if (!productId || quantity < 1) {
+      const errorMessage = "Invalid product or quantity"
+      setError(errorMessage)
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      throw new Error(errorMessage)
+    }
+
+    // Optimistic update for better UX
+    const optimisticCart = cart ? {
+      ...cart,
+      items: [...cart.items]
+    } : null
+
     setIsLoading(true)
     setError(null)
+    
     try {
       console.log("Adding to cart:", { productId, quantity })
-      const updatedCart = await cartService.addItemToCart(productId, quantity)
+      const response = await cartService.addItemToCart(productId, quantity)
+      
+      // Handle the new response format with type safety
+      const updatedCart = response.cart || response
       console.log("Cart updated:", updatedCart)
 
-      // Force update the cart state
+      // Update cart state
       setCart(updatedCart)
 
+      // Enhanced toast message based on response
+      const message = response.message || "Item has been added to your cart"
+      const action = response.action || "added"
+      const productName = response.productName || "Item"
+      
       toast({
-        title: "Added to Cart",
-        description: "Item has been added to your cart",
+        title: action === "updated" ? "Cart Updated" : "Added to Cart",
+        description: action === "updated" 
+          ? `${productName} quantity updated to ${response.newQuantity || quantity}`
+          : `${productName} added to your cart`,
       })
 
       return updatedCart
     } catch (err: any) {
       console.error("Error adding to cart:", err)
+      
+      // Revert optimistic update on error
+      if (optimisticCart) {
+        setCart(optimisticCart)
+      }
+      
       const errorMessage = err.response?.data?.message || "Failed to add item to cart"
       setError(errorMessage)
 
+      // Enhanced error toast with more specific messages
+      let toastTitle = "Error"
+      let toastDescription = errorMessage
+      
+      if (err.response?.status === 400) {
+        if (errorMessage.includes("stock")) {
+          toastTitle = "Stock Unavailable"
+          toastDescription = errorMessage
+        } else if (errorMessage.includes("Maximum quantity")) {
+          toastTitle = "Quantity Limit"
+          toastDescription = errorMessage
+        } else if (errorMessage.includes("not available")) {
+          toastTitle = "Product Unavailable"
+          toastDescription = errorMessage
+        }
+      }
+
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: toastTitle,
+        description: toastDescription,
         variant: "destructive",
       })
 
@@ -88,7 +149,7 @@ export function CartProvider({ children }: CartProviderProps) {
     }
   }
 
-  const removeFromCart = async (productId: string): Promise<Cart> => {
+  const removeFromCart = async (productId: string): Promise<IUserCart> => {
     setIsLoading(true)
     setError(null)
     try {
@@ -121,9 +182,49 @@ export function CartProvider({ children }: CartProviderProps) {
     }
   }
 
+  const validateCart = async (): Promise<any> => {
+    if (!isAuthenticated) {
+      throw new Error("User not authenticated")
+    }
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      console.log("Validating cart...")
+      const validationResult = await cartService.validateCart()
+      console.log("Cart validation result:", validationResult)
+      
+      // If cart has issues, show appropriate toast
+      if (!validationResult.isValid && validationResult.issues?.length > 0) {
+        const issueCount = validationResult.issues.length
+        toast({
+          title: "Cart Issues Found",
+          description: `${issueCount} item${issueCount > 1 ? 's' : ''} in your cart need attention`,
+          variant: "destructive",
+        })
+      }
+      
+      return validationResult
+    } catch (err: any) {
+      console.error("Error validating cart:", err)
+      const errorMessage = err.response?.data?.message || "Failed to validate cart"
+      setError(errorMessage)
+      
+      toast({
+        title: "Validation Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const getItemQuantity = (productId: string): number => {
     if (!cart || !cart.items) return 0
-    const item = cart.items.find((item) => item.productId === productId || item.productId._id === productId)
+    const item = cart.items.find((item) => item.productId._id === productId)
     return item ? item.quantity : 0
   }
 
@@ -143,6 +244,7 @@ export function CartProvider({ children }: CartProviderProps) {
     removeFromCart,
     clearCart,
     refetchCart: fetchCart,
+    validateCart,
     cartItemsCount,
     getItemQuantity,
   }

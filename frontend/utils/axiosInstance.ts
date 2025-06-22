@@ -220,6 +220,14 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
+      // Check if we have a stored user before attempting refresh
+      const storedUser = localStorage.getItem("user")
+      if (!storedUser) {
+        // No stored user, so no point in trying to refresh
+        console.info("[Axios Interceptor] No stored user found, skipping refresh attempt.")
+        return Promise.reject(error)
+      }
+
       try {
         const { data } = await apiClient.post("/api/auth/refresh-token", {}, { withCredentials: true })
 

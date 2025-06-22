@@ -14,6 +14,13 @@ const SALT_ROUNDS_PASSWORD = 12;
 // Number of salt rounds for hashing password reset OTPs stored on the user model.
 const SALT_ROUNDS_OTP_BCRYPT = 10;
 
+// Helper function to generate username from firstName and lastName
+const generateUsername = (firstName: string, lastName: string): string => {
+  const baseUsername = `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const timestamp = Date.now().toString().slice(-4);
+  return `${baseUsername}${timestamp}`;
+};
+
 // --- User Signup Controller ---
 /**
  * Handles the initial user signup request.
@@ -24,7 +31,7 @@ const SALT_ROUNDS_OTP_BCRYPT = 10;
 export const signup = async (req: Request, res: Response): Promise<void> => {
   // Destructure required fields from the request body.
   // photoBase64 for direct image file uploads, photoUrlInput for providing a URL.
-  const { username, email, password, photoBase64, photoUrlInput } = req.body;
+  const { username, firstName, lastName, email, password, photoBase64, photoUrlInput } = req.body;
   let photoURL: string | undefined; // This will store the final URL of the user's profile picture.
 
   try {
@@ -37,6 +44,13 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     }
     // If an existing user is found but not verified, the flow proceeds to send a new OTP,
     // allowing them to complete the verification process.
+
+    // 2. Auto-generate username if not provided
+    let finalUsername = username;
+    if (!finalUsername || finalUsername.trim() === '') {
+      finalUsername = generateUsername(firstName, lastName);
+      console.log(`[Signup] Auto-generated username: ${finalUsername}`);
+    }
 
     // 2. Handle Profile Picture Upload Logic
     if (photoBase64) {
@@ -88,7 +102,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     // to create the actual user record.
     res.status(200).json({
       message: 'OTP sent to your email for verification. Please check your inbox.',
-      tempUserData: { username, email, password: hashedPassword, photoURL } // Include photoURL here
+      tempUserData: { username: finalUsername, firstName, lastName, email, password: hashedPassword, photoURL } // Include photoURL here
     });
   } catch (err: any) {
     // Catch any unexpected errors during the signup process.
@@ -106,7 +120,7 @@ export const verifySignupOtpAndCreateUser = async (req: Request, res: Response):
   // Destructure required fields from the request body.
   // `tempUserData` contains the hashed password and photoURL from the signup step.
   const { email, otp, tempUserData } = req.body;
-  const { username, password: hashedPasswordFromTemp, photoURL } = tempUserData; // Extract details from tempUserData
+  const { username, firstName, lastName, password: hashedPasswordFromTemp, photoURL } = tempUserData; // Extract details from tempUserData
 
   try {
     // 1. Verify the OTP against the stored record.
@@ -133,6 +147,8 @@ export const verifySignupOtpAndCreateUser = async (req: Request, res: Response):
       // update their details and mark as verified.
       console.log(`[Verify OTP] Updating existing unverified user: ${email}`);
       user.username = username;
+      user.firstName = firstName;
+      user.lastName = lastName;
       user.password = hashedPasswordFromTemp; // Use the hashed password from temp data
       user.photoURL = photoURL; // Set the photo URL
       user.isVerified = true; // Mark account as verified
@@ -142,6 +158,8 @@ export const verifySignupOtpAndCreateUser = async (req: Request, res: Response):
       console.log(`[Verify OTP] Creating new user: ${email}`);
       user = await UserModel.create({
         username,
+        firstName,
+        lastName,
         email,
         password: hashedPasswordFromTemp, // Use the hashed password from temp data
         photoURL, // Set the photo URL
@@ -179,6 +197,8 @@ export const verifySignupOtpAndCreateUser = async (req: Request, res: Response):
       user: {
         id: user._id,
         username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role, // Include user's role
         photoURL: user.photoURL // Include user's profile picture URL
@@ -291,10 +311,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user._id,
         username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role, // Include user's role
         isBlocked: user.isBlocked,
-
         photoURL: user.photoURL // Include user's profile picture URL
       }
     });
@@ -478,6 +499,8 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
             user: {
                 id: user._id.toString(), // Ensure ID is sent as string
                 username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 email: user.email,
                 role: user.role,
                 photoURL: user.photoURL,

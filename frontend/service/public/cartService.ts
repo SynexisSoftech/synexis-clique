@@ -50,13 +50,13 @@ export interface Cart {
 
 export const cartService = {
   // Get user's cart
-  getMyCart: async (): Promise<Cart> => {
+  getMyCart: async (): Promise<IUserCart> => {
     const response = await apiClient.get("/api/cart")
     return response.data
   },
 
   // Add item to cart
-  addItemToCart: async (productId: string, quantity: number): Promise<Cart> => {
+  addItemToCart: async (productId: string, quantity: number): Promise<any> => {
     const response = await apiClient.post("/api/cart/items", {
       productId,
       quantity,
@@ -65,7 +65,7 @@ export const cartService = {
   },
 
   // Remove item from cart
-  removeItemFromCart: async (productId: string): Promise<Cart> => {
+  removeItemFromCart: async (productId: string): Promise<IUserCart> => {
     const response = await apiClient.delete(`/api/cart/items/${productId}`)
     return response.data
   },
@@ -73,6 +73,12 @@ export const cartService = {
   // Clear cart
   clearCart: async (): Promise<{ message: string }> => {
     const response = await apiClient.delete("/api/cart")
+    return response.data
+  },
+
+  // Validate cart
+  validateCart: async (): Promise<any> => {
+    const response = await apiClient.post("/api/cart/validate")
     return response.data
   },
 }
