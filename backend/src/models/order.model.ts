@@ -15,7 +15,8 @@ export interface IOrder extends Document {
   transaction_uuid: string;
   amount: number; // Represents the subtotal before shipping/tax
   totalAmount: number; // The final grand total
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  status: 'PENDING' | 'COMPLETED' | 'DELIVERED' | 'FAILED'; // payment status
+  deliveryStatus: 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   eSewaRefId?: string;
   shippingInfo: {
     firstName: string;
@@ -86,7 +87,12 @@ const OrderSchema: Schema<IOrder> = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'COMPLETED', 'FAILED'],
+      enum: ['PENDING', 'COMPLETED', 'DELIVERED', 'FAILED'],
+      default: 'PENDING',
+    },
+    deliveryStatus: {
+      type: String,
+      enum: ['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
       default: 'PENDING',
     },
     eSewaRefId: {

@@ -1,11 +1,13 @@
 // Shared types that can be used across components
-export type OrderStatus = "PENDING" | "COMPLETED" | "FAILED"
+export type OrderStatus = "PENDING" | "COMPLETED" | "DELIVERED" | "FAILED"
+export type DeliveryStatus = "PENDING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
 
 export interface BaseOrder {
   _id: string
   transaction_uuid: string
   totalAmount: number
-  status: OrderStatus
+  status: OrderStatus // payment status
+  deliveryStatus: DeliveryStatus
   eSewaRefId?: string
   createdAt: string
   updatedAt: string
@@ -35,6 +37,8 @@ export const getOrderStatusColor = (status: OrderStatus): string => {
       return "bg-yellow-100 text-yellow-800"
     case "COMPLETED":
       return "bg-green-100 text-green-800"
+    case "DELIVERED":
+      return "bg-blue-100 text-blue-800"
     case "FAILED":
       return "bg-red-100 text-red-800"
     default:

@@ -3,6 +3,7 @@ import {
   getMyOrders,
   getMyOrderById,
   createOrder, // <-- New import
+  verifyPayment, // <-- New import
 } from '../../controllers/public/order.controller'; // Adjust path
 import { protect } from '../../middleware/auth.middleware'; // Adjust path
 
@@ -13,6 +14,9 @@ const router = express.Router();
 
 router.route('/')
   .post(protect, createOrder); // <-- New route to create an order
+
+router.route('/verify-payment')
+  .post(verifyPayment); // <-- New route for payment verification (no auth required - webhook)
 
 router.route('/my-orders')
   .get(protect, getMyOrders);

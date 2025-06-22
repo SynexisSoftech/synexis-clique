@@ -30,7 +30,8 @@ export interface AdminOrder {
   transaction_uuid: string
   amount: number // This is the subtotal
   totalAmount: number // This is the grand total
-  status: "PENDING" | "COMPLETED" | "FAILED"
+  status: "PENDING" | "COMPLETED" | "DELIVERED" | "FAILED"
+  deliveryStatus: "PENDING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
   createdAt: string
   updatedAt: string
 }
@@ -43,7 +44,11 @@ export interface AdminOrdersResponse {
 }
 
 export interface UpdateOrderStatusRequest {
-  status: "PENDING" | "COMPLETED" | "FAILED"
+  status: "PENDING" | "COMPLETED" | "DELIVERED" | "FAILED"
+}
+
+export interface UpdateOrderDeliveryStatusRequest {
+  deliveryStatus: "PENDING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
 }
 
 // The service functions themselves don't need to change,
@@ -74,6 +79,11 @@ export const adminOrderService = {
    */
   updateOrderStatus: async (orderId: string, data: UpdateOrderStatusRequest): Promise<AdminOrder> => {
     const response = await apiClient.put(`/api/admin/orders/${orderId}/status`, data)
+    return response.data
+  },
+
+  updateOrderDeliveryStatus: async (orderId: string, data: UpdateOrderDeliveryStatusRequest): Promise<AdminOrder> => {
+    const response = await apiClient.put(`/api/admin/orders/${orderId}/delivery-status`, data)
     return response.data
   },
 }

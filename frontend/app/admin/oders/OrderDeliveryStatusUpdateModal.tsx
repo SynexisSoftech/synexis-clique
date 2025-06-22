@@ -11,39 +11,38 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { adminOrderService, type AdminOrder } from "../../../service/orderService"
 
-interface OrderStatusUpdateModalProps {
+interface OrderDeliveryStatusUpdateModalProps {
   order: AdminOrder
   open: boolean
   onClose: () => void
-  onStatusUpdated: (updatedOrder: AdminOrder) => void
+  onDeliveryStatusUpdated: (updatedOrder: AdminOrder) => void
 }
 
-// Helper function to get status color
-const getStatusColor = (status: string): string => {
+const getDeliveryStatusColor = (status: string): string => {
   switch (status) {
     case "PENDING":
       return "bg-yellow-100 text-yellow-800 border-yellow-200"
-    case "COMPLETED":
-      return "bg-green-100 text-green-800 border-green-200"
+    case "SHIPPED":
+      return "bg-purple-100 text-purple-800 border-purple-200"
     case "DELIVERED":
       return "bg-blue-100 text-blue-800 border-blue-200"
-    case "FAILED":
+    case "CANCELLED":
       return "bg-red-100 text-red-800 border-red-200"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200"
   }
 }
 
-export default function OrderStatusUpdateModal({ order, open, onClose, onStatusUpdated }: OrderStatusUpdateModalProps) {
-  const [newStatus, setNewStatus] = useState<string>(order.status)
+export default function OrderDeliveryStatusUpdateModal({ order, open, onClose, onDeliveryStatusUpdated }: OrderDeliveryStatusUpdateModalProps) {
+  const [newDeliveryStatus, setNewDeliveryStatus] = useState<string>(order.deliveryStatus)
   const [isUpdating, setIsUpdating] = useState(false)
   const { toast } = useToast()
 
-  const handleUpdateStatus = async () => {
-    if (newStatus === order.status) {
+  const handleUpdateDeliveryStatus = async () => {
+    if (newDeliveryStatus === order.deliveryStatus) {
       toast({
         title: "No Changes",
-        description: "The status is already set to this value",
+        description: "The delivery status is already set to this value",
         variant: "destructive",
       })
       return
@@ -51,18 +50,18 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
 
     setIsUpdating(true)
     try {
-      const updatedOrder = await adminOrderService.updateOrderStatus(order._id, {
-        status: newStatus as "PENDING" | "COMPLETED" | "FAILED" | "DELIVERED",
+      const updatedOrder = await adminOrderService.updateOrderDeliveryStatus(order._id, {
+        deliveryStatus: newDeliveryStatus as "PENDING" | "SHIPPED" | "DELIVERED" | "CANCELLED",
       })
-      onStatusUpdated(updatedOrder)
+      onDeliveryStatusUpdated(updatedOrder)
       toast({
-        title: "Status Updated",
-        description: `Order status has been updated to ${newStatus}`,
+        title: "Delivery Status Updated",
+        description: `Order delivery status has been updated to ${newDeliveryStatus}`,
       })
     } catch (error: any) {
       toast({
         title: "Update Failed",
-        description: error.response?.data?.message || "Failed to update order status",
+        description: error.response?.data?.message || "Failed to update order delivery status",
         variant: "destructive",
       })
     } finally {
@@ -74,7 +73,7 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-[#6F4E37] font-cormorant">Update Order Status</DialogTitle>
+          <DialogTitle className="text-[#6F4E37] font-cormorant">Update Delivery Status</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -83,16 +82,16 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
             <h3 className="font-semibold text-[#6F4E37] font-cormorant mb-2">Order #{order._id.slice(-8)}</h3>
             <p className="text-sm text-[#6F4E37]/70 font-cormorant">Customer: {order.userId.username}</p>
             <p className="text-sm text-[#6F4E37]/70 font-cormorant">
-              Current Status: <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
+              Current Delivery Status: <Badge className={getDeliveryStatusColor(order.deliveryStatus)}>{order.deliveryStatus}</Badge>
             </p>
           </div>
 
-          {/* Status Selection */}
+          {/* Delivery Status Selection */}
           <div className="space-y-2">
-            <Label htmlFor="status" className="text-[#6F4E37] font-cormorant">
-              New Status
+            <Label htmlFor="deliveryStatus" className="text-[#6F4E37] font-cormorant">
+              New Delivery Status
             </Label>
-            <Select value={newStatus} onValueChange={setNewStatus}>
+            <Select value={newDeliveryStatus} onValueChange={setNewDeliveryStatus}>
               <SelectTrigger className="border-[#6F4E37]/30 focus:border-[#6F4E37] focus:ring-[#6F4E37]/20">
                 <SelectValue />
               </SelectTrigger>
@@ -103,10 +102,10 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
                     Pending
                   </div>
                 </SelectItem>
-                <SelectItem value="COMPLETED">
+                <SelectItem value="SHIPPED">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Completed
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    Shipped
                   </div>
                 </SelectItem>
                 <SelectItem value="DELIVERED">
@@ -115,10 +114,10 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
                     Delivered
                   </div>
                 </SelectItem>
-                <SelectItem value="FAILED">
+                <SelectItem value="CANCELLED">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    Failed
+                    Cancelled
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -126,11 +125,11 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
           </div>
 
           {/* Status Change Preview */}
-          {newStatus !== order.status && (
+          {newDeliveryStatus !== order.deliveryStatus && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800 font-cormorant">
-                Status will change from <Badge className={getStatusColor(order.status)}>{order.status}</Badge> to{" "}
-                <Badge className={getStatusColor(newStatus)}>{newStatus}</Badge>
+                Delivery status will change from <Badge className={getDeliveryStatusColor(order.deliveryStatus)}>{order.deliveryStatus}</Badge> to{" "}
+                <Badge className={getDeliveryStatusColor(newDeliveryStatus)}>{newDeliveryStatus}</Badge>
               </p>
             </div>
           )}
@@ -146,9 +145,9 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
             Cancel
           </Button>
           <Button
-            onClick={handleUpdateStatus}
+            onClick={handleUpdateDeliveryStatus}
             className="bg-[#6F4E37] hover:bg-[#5d4230] font-cormorant"
-            disabled={isUpdating || newStatus === order.status}
+            disabled={isUpdating || newDeliveryStatus === order.deliveryStatus}
           >
             {isUpdating ? (
               <>
@@ -156,7 +155,7 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
                 Updating...
               </>
             ) : (
-              "Update Status"
+              "Update Delivery Status"
             )}
           </Button>
         </DialogFooter>
@@ -164,5 +163,3 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
     </Dialog>
   )
 }
-
-// Duplicate and adapt for delivery status

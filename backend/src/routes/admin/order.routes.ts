@@ -2,7 +2,8 @@ import express from 'express';
 import {
   getAllOrders,
   getOrderById,
-  updateOrderStatus
+  updateOrderStatus,
+  updateOrderDeliveryStatus
 } from '../../controllers/admin/order.controller'; // Adjust path as needed
 import { protect, authorize } from '../../middleware/auth.middleware'; // Adjust path
 import { UserRole } from '../../models/user.model'; // Adjust path
@@ -20,5 +21,8 @@ router.route('/:id')
 
 router.route('/:id/status')
   .put(protect, authorize([UserRole.ADMIN]), updateOrderStatus);
+
+router.route('/:id/delivery-status')
+  .put(protect, authorize([UserRole.ADMIN]), updateOrderDeliveryStatus);
 
 export default router;

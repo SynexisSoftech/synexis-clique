@@ -58,6 +58,20 @@ export interface OrdersResponse {
   count: number
 }
 
+export interface PaymentVerificationRequest {
+  transaction_uuid: string;
+  transaction_code: string;
+  status: string;
+  total_amount: string;
+  signature?: string;
+}
+
+export interface PaymentVerificationResponse {
+  message: string;
+  orderId: string;
+  status: string;
+}
+
 class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {
     try {
@@ -83,6 +97,22 @@ class OrderService {
   async getMyOrderById(orderId: string): Promise<Order> {
     const response = await apiClient.get(`/api/orders/${orderId}`)
     return response.data
+  }
+
+  /**
+   * Verify payment with backend and reduce stock
+   */
+  async verifyPayment(data: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
+    try {
+      console.log('🔍 OrderService: Sending payment verification request:', data);
+      const response = await apiClient.post('/api/orders/verify-payment', data);
+      console.log('✅ OrderService: Payment verification successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ OrderService: Payment verification failed:', error);
+      console.error('❌ OrderService: Error response:', error.response?.data);
+      throw new Error(`Payment verification failed: ${error.response?.data?.message || error.message}`);
+    }
   }
 }
 

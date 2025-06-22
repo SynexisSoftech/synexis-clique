@@ -18,7 +18,7 @@ router.get('/users', protect, authorize([UserRole.ADMIN]), UserController.getAll
 // PATCH /api/admin/users/:userId/block - Blocks or unblocks a user
 router.patch('/users/:userId/block', protect, authorize([UserRole.ADMIN]), UserController.toggleUserBlockStatus);
 
-// PATCH /api/admin/users/:userId/role - Changes a user's role <-- ADD THIS LINE
+// PATCH /api/admin/users/:userId/role - Changes a user's role
 router.patch('/users/:userId/role', protect, authorize([UserRole.ADMIN]), UserController.changeUserRole);
 
 export default router;

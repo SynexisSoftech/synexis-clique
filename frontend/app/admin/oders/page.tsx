@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Filter, Eye, Edit, MoreHorizontal, Download, RefreshCw, Calendar, Package } from "lucide-react"
+import { Search, Filter, Eye, Edit, MoreHorizontal, Download, RefreshCw, Calendar, Package, User, ShoppingBag } from "lucide-react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { adminOrderService, AdminOrdersResponse, type AdminOrder } from "../../../service/orderService"
 import OrderDetailsModal from "./OrderDetailsModal"
 import OrderStatusUpdateModal from "./OrderStatusUpdateModal"
+import OrderDeliveryStatusUpdateModal from "./OrderDeliveryStatusUpdateModal"
 
 // Helper function to format price
 const formatPrice = (price: number): string => {
@@ -52,6 +54,8 @@ const getStatusColor = (status: string): string => {
       return "bg-yellow-100 text-yellow-800 border-yellow-200"
     case "COMPLETED":
       return "bg-green-100 text-green-800 border-green-200"
+    case "DELIVERED":
+      return "bg-blue-100 text-blue-800 border-blue-200"
     case "FAILED":
       return "bg-red-100 text-red-800 border-red-200"
     default:
@@ -71,7 +75,9 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showDeliveryStatusModal, setShowDeliveryStatusModal] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   const fetchOrders = async (page = 1, search = "", status = "") => {
     try {
@@ -133,6 +139,21 @@ export default function AdminOrdersPage() {
     })
   }
 
+  const handleUpdateDeliveryStatus = (order: AdminOrder) => {
+    setSelectedOrder(order)
+    setShowDeliveryStatusModal(true)
+  }
+
+  const handleDeliveryStatusUpdated = (updatedOrder: AdminOrder) => {
+    setOrders(orders.map((order) => (order._id === updatedOrder._id ? updatedOrder : order)))
+    setShowDeliveryStatusModal(false)
+    setSelectedOrder(null)
+    toast({
+      title: "Delivery Status Updated",
+      description: `Order delivery status updated to ${updatedOrder.deliveryStatus}`,
+    })
+  }
+
   const handleExportOrders = () => {
     toast({
       title: "Export Started",
@@ -163,8 +184,16 @@ export default function AdminOrdersPage() {
     return `${order.items[0].productId.title} +${order.items.length - 1} more`
   }
 
+  const handleViewCustomerProfile = (userId: string) => {
+    router.push(`/admin/users/${userId}`)
+  }
+
+  const handleViewProductProfile = (productId: string) => {
+    router.push(`/admin/products/${productId}`)
+  }
+
   return (
-    <div className="min-h-screen ">"
+    <div className="min-h-screen ">
       {/* Main Content Area - Leave space for sidebar and header */}
       <div className="ml-1 pt-16">
         {" "}
@@ -199,7 +228,7 @@ export default function AdminOrdersPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card className="border-[#6F4E37]/20 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -238,6 +267,21 @@ export default function AdminOrdersPage() {
                     <p className="text-sm text-[#6F4E37]/70 font-cormorant">Completed</p>
                     <p className="text-xl font-bold text-[#6F4E37] font-cormorant">
                       {orders.filter((o) => o.status === "COMPLETED").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-[#6F4E37]/20 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Package className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#6F4E37]/70 font-cormorant">Delivered</p>
+                    <p className="text-xl font-bold text-[#6F4E37] font-cormorant">
+                      {orders.filter((o) => o.status === "DELIVERED").length}
                     </p>
                   </div>
                 </div>
@@ -285,6 +329,7 @@ export default function AdminOrdersPage() {
                       <SelectItem value="ALL">All Status</SelectItem>
                       <SelectItem value="PENDING">Pending</SelectItem>
                       <SelectItem value="COMPLETED">Completed</SelectItem>
+                      <SelectItem value="DELIVERED">Delivered</SelectItem>
                       <SelectItem value="FAILED">Failed</SelectItem>
                     </SelectContent>
                   </Select>
@@ -337,6 +382,7 @@ export default function AdminOrdersPage() {
                         <TableHead className="text-[#6F4E37] font-cormorant">Products</TableHead>
                         <TableHead className="text-[#6F4E37] font-cormorant">Amount</TableHead>
                         <TableHead className="text-[#6F4E37] font-cormorant">Status</TableHead>
+                        <TableHead className="text-[#6F4E37] font-cormorant">Delivery Status</TableHead>
                         <TableHead className="text-[#6F4E37] font-cormorant">Date</TableHead>
                         <TableHead className="text-[#6F4E37] font-cormorant">Actions</TableHead>
                       </TableRow>
@@ -365,7 +411,12 @@ export default function AdminOrdersPage() {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium text-[#6F4E37] font-cormorant">{order.userId.username}</p>
+                                <button
+                                  onClick={() => handleViewCustomerProfile(order.userId._id)}
+                                  className="font-medium text-[#6F4E37] font-cormorant hover:text-[#5d4230] hover:underline cursor-pointer text-left"
+                                >
+                                  {order.userId.username}
+                                </button>
                                 <p className="text-xs text-[#6F4E37]/60 font-cormorant">{order.userId.email}</p>
                               </div>
                             </div>
@@ -378,9 +429,12 @@ export default function AdminOrdersPage() {
                                 className="w-10 h-10 rounded-lg object-cover bg-[#6F4E37]/10"
                               />
                               <div>
-                                <p className="font-medium text-[#6F4E37] font-cormorant text-sm">
+                                <button
+                                  onClick={() => handleViewProductProfile(order.items[0].productId._id)}
+                                  className="font-medium text-[#6F4E37] font-cormorant text-sm hover:text-[#5d4230] hover:underline cursor-pointer text-left"
+                                >
                                   {getProductTitles(order)}
-                                </p>
+                                </button>
                                 <p className="text-xs text-[#6F4E37]/60 font-cormorant">
                                   {getTotalItems(order)} item{getTotalItems(order) !== 1 ? "s" : ""}
                                 </p>
@@ -403,6 +457,9 @@ export default function AdminOrdersPage() {
                             <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
                           </TableCell>
                           <TableCell>
+                            <Badge className={getStatusColor(order.deliveryStatus)}>{order.deliveryStatus}</Badge>
+                          </TableCell>
+                          <TableCell>
                             <p className="text-sm text-[#6F4E37] font-cormorant">{formatDate(order.createdAt)}</p>
                           </TableCell>
                           <TableCell>
@@ -423,11 +480,33 @@ export default function AdminOrdersPage() {
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  onClick={() => handleViewCustomerProfile(order.userId._id)}
+                                  className="text-[#6F4E37] hover:bg-[#6F4E37]/10 font-cormorant"
+                                >
+                                  <User className="h-4 w-4 mr-2" />
+                                  View Customer Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleViewProductProfile(order.items[0].productId._id)}
+                                  className="text-[#6F4E37] hover:bg-[#6F4E37]/10 font-cormorant"
+                                >
+                                  <ShoppingBag className="h-4 w-4 mr-2" />
+                                  View Product Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-[#6F4E37]/20" />
+                                <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(order)}
                                   className="text-[#6F4E37] hover:bg-[#6F4E37]/10 font-cormorant"
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
                                   Update Status
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateDeliveryStatus(order)}
+                                  className="text-[#6F4E37] hover:bg-[#6F4E37]/10 font-cormorant"
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Update Delivery Status
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -478,23 +557,9 @@ export default function AdminOrdersPage() {
       {/* Modals */}
       {selectedOrder && (
         <>
-          <OrderDetailsModal
-            order={selectedOrder}
-            open={showDetailsModal}
-            onClose={() => {
-              setShowDetailsModal(false)
-              setSelectedOrder(null)
-            }}
-          />
-          <OrderStatusUpdateModal
-            order={selectedOrder}
-            open={showStatusModal}
-            onClose={() => {
-              setShowStatusModal(false)
-              setSelectedOrder(null)
-            }}
-            onStatusUpdated={handleStatusUpdated}
-          />
+          <OrderDetailsModal order={selectedOrder} open={showDetailsModal} onClose={() => setShowDetailsModal(false)} />
+          <OrderStatusUpdateModal order={selectedOrder} open={showStatusModal} onClose={() => setShowStatusModal(false)} onStatusUpdated={handleStatusUpdated} />
+          <OrderDeliveryStatusUpdateModal order={selectedOrder} open={showDeliveryStatusModal} onClose={() => setShowDeliveryStatusModal(false)} onDeliveryStatusUpdated={handleDeliveryStatusUpdated} />
         </>
       )}
     </div>

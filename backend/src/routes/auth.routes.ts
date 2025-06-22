@@ -307,6 +307,8 @@ import {
   loginValidationRules,
   emailOnlyRules,
   resetPasswordRules,
+  updateProfileRules,
+  changePasswordRules,
   validate // The middleware function to process validation results
 } from '../middleware/validate';
 import { authActionLimiter, otpGenerationLimiter } from '../middleware/rateLimiter';
@@ -389,6 +391,26 @@ router.post(
 router.post(
     '/logout',
     AuthController.logout
+);
+
+// --- Update Profile ---
+// This route is protected and allows users to update their profile information
+router.put(
+    '/profile',
+    protect,
+    updateProfileRules(),
+    validate,
+    AuthController.updateProfile
+);
+
+// --- Change Password ---
+// This route is protected and allows users to change their password
+router.put(
+    '/change-password',
+    protect,
+    changePasswordRules(),
+    validate,
+    AuthController.changePassword
 );
 
 export default router;

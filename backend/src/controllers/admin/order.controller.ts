@@ -16,7 +16,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
 
     const query: any = {};
 
-    if (status && ['PENDING', 'COMPLETED', 'FAILED'].includes((status as string).toUpperCase())) {
+    if (status && ['PENDING', 'COMPLETED', 'DELIVERED', 'FAILED'].includes((status as string).toUpperCase())) {
       query.status = (status as string).toUpperCase();
     }
 
@@ -99,8 +99,8 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
         return;
     }
 
-    if (!status || !['PENDING', 'COMPLETED', 'FAILED'].includes(status.toUpperCase())) {
-        res.status(400).json({ message: 'Invalid status provided. Must be one of: PENDING, COMPLETED, FAILED.' });
+    if (!status || !['PENDING', 'COMPLETED', 'DELIVERED', 'FAILED'].includes(status.toUpperCase())) {
+        res.status(400).json({ message: 'Invalid status provided. Must be one of: PENDING, COMPLETED, DELIVERED, FAILED.' });
         return;
     }
 
@@ -111,7 +111,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
         return;
     }
 
-    order.status = status.toUpperCase() as 'PENDING' | 'COMPLETED' | 'FAILED';
+    order.status = status.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DELIVERED' | 'FAILED';
     const updatedOrder = await order.save();
 
     res.json(updatedOrder);
@@ -125,3 +125,43 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
     }
   }
 };
+
+/**
+ * @desc    Update order delivery status
+ * @route   PUT /api/admin/orders/:id/delivery-status
+ * @access  Private/Admin
+ */
+export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { deliveryStatus } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({ message: 'Invalid order ID format' });
+      return;
+    }
+
+    if (!deliveryStatus || !['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].includes(deliveryStatus.toUpperCase())) {
+      res.status(400).json({ message: 'Invalid delivery status provided. Must be one of: PENDING, SHIPPED, DELIVERED, CANCELLED.' });
+      return;
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      res.status(404).json({ message: 'Order not found' });
+      return;
+    }
+
+    order.deliveryStatus = deliveryStatus.toUpperCase() as 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+    const updatedOrder = await order.save();
+
+    res.json(updatedOrder);
+  } catch (error: any) {
+    console.error('[Admin Order Controller] Update Order Delivery Status Error:', error.message);
+    if (error.name === 'ValidationError') {
+      res.status(400).json({ message: 'Validation Error', errors: error.errors });
+    } else {
+      res.status(500).json({ message: 'Server error while updating order delivery status' });
+    }
+  }
+}

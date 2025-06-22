@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, Package, Loader2, AlertCircle, Download, Eye, ArrowRight, Home, ShoppingBag } from "lucide-react"
@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
 import { useToast } from "@/hooks/use-toast"
+import { orderService } from "@/service/public/orderService"
 
 interface PaymentData {
   transaction_code: string
@@ -51,7 +52,7 @@ const formatPrice = (price: number): string => {
   }).format(price)
 }
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -60,6 +61,7 @@ export default function SuccessPage() {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
   const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'failed'>('pending')
 
   useEffect(() => {
     const processPaymentData = async () => {
@@ -89,10 +91,46 @@ export default function SuccessPage() {
             localStorage.removeItem("pendingOrder")
           }
 
-          toast({
-            title: "Payment Successful!",
-            description: "Your order has been placed successfully.",
-          })
+          // Call backend to verify payment and reduce stock
+          try {
+            console.log('🔍 Starting payment verification...');
+            console.log('📊 Payment data:', {
+              transaction_uuid: paymentResponse.transaction_uuid,
+              transaction_code: paymentResponse.transaction_code,
+              status: paymentResponse.status,
+              total_amount: paymentResponse.total_amount,
+              signature: paymentResponse.signature,
+            });
+            
+            const verificationResult = await orderService.verifyPayment({
+              transaction_uuid: paymentResponse.transaction_uuid,
+              transaction_code: paymentResponse.transaction_code,
+              status: paymentResponse.status,
+              total_amount: paymentResponse.total_amount,
+              signature: paymentResponse.signature,
+            });
+            
+            console.log('✅ Payment verification successful:', verificationResult);
+            setVerificationStatus('success');
+            
+            toast({
+              title: "Payment Successful!",
+              description: "Your order has been placed successfully and stock has been updated.",
+            });
+          } catch (verificationError: any) {
+            console.error('❌ Error calling payment verification:', verificationError);
+            console.error('❌ Error details:', {
+              message: verificationError.message,
+              stack: verificationError.stack,
+            });
+            setVerificationStatus('failed');
+            
+            toast({
+              title: "Payment Successful!",
+              description: "Your payment was successful, but there was an issue updating stock. Please contact support.",
+              variant: "destructive",
+            });
+          }
         } else {
           setIsSuccess(false)
           toast({
@@ -206,6 +244,34 @@ export default function SuccessPage() {
                 Thank you for your order! We've received your payment and will begin processing your order shortly.
                 You'll receive a confirmation email with all the details.
               </p>
+              
+              {/* Verification Status Indicator */}
+              {verificationStatus === 'pending' && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Updating inventory...</span>
+                  </div>
+                </div>
+              )}
+              
+              {verificationStatus === 'success' && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm">Inventory updated successfully</span>
+                  </div>
+                </div>
+              )}
+              
+              {verificationStatus === 'failed' && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-700">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">Payment successful, but inventory update failed. Please contact support.</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -372,5 +438,28 @@ export default function SuccessPage() {
       </div>
       <Footer />
     </>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+          <div className="container mx-auto px-4 py-16">
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-12 w-12 animate-spin text-green-600" />
+                <p className="text-green-700 text-lg font-medium">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    }>
+      <SuccessPageContent />
+    </Suspense>
   )
 } 

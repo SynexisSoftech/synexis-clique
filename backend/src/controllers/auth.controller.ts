@@ -605,3 +605,129 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: `Logout failed: ${err.message || 'An unexpected error occurred.'}` });
   }
 };
+
+// --- Update Profile Controller ---
+/**
+ * Updates user profile information (firstName, lastName, photoURL)
+ */
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Unauthorized: User data not available.' });
+    return;
+  }
+
+  const { firstName, lastName, photoBase64 } = req.body;
+
+  try {
+    const user = await UserModel.findById(req.user._id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found.' });
+      return;
+    }
+
+    // Update firstName if provided
+    if (firstName && firstName.trim() !== '') {
+      if (firstName.trim().length < 2 || firstName.trim().length > 50) {
+        res.status(400).json({ message: 'First name must be between 2 and 50 characters.' });
+        return;
+      }
+      user.firstName = firstName.trim();
+    }
+
+    // Update lastName if provided
+    if (lastName && lastName.trim() !== '') {
+      if (lastName.trim().length < 2 || lastName.trim().length > 50) {
+        res.status(400).json({ message: 'Last name must be between 2 and 50 characters.' });
+        return;
+      }
+      user.lastName = lastName.trim();
+    }
+
+    // Handle profile picture update
+    if (photoBase64) {
+      try {
+        const photoURL = await uploadImageToCloudinary(photoBase64, 'user_profiles');
+        user.photoURL = photoURL;
+        console.log(`[Update Profile] Photo uploaded to Cloudinary: ${photoURL}`);
+      } catch (uploadError: any) {
+        console.error('[Update Profile] Photo upload failed:', uploadError);
+        res.status(500).json({ message: 'Failed to upload profile picture. Please try again.' });
+        return;
+      }
+    }
+
+    await user.save();
+
+    // Return updated user data (excluding sensitive fields)
+    res.status(200).json({
+      message: 'Profile updated successfully.',
+      user: {
+        id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        photoURL: user.photoURL,
+        isVerified: user.isVerified,
+        isBlocked: user.isBlocked
+      }
+    });
+
+  } catch (err: any) {
+    console.error('Update Profile Error:', err);
+    res.status(500).json({ message: `Profile update failed: ${err.message || 'An unexpected error occurred.'}` });
+  }
+};
+
+// --- Change Password Controller ---
+/**
+ * Changes user password after verifying the old password
+ */
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ message: 'Unauthorized: User data not available.' });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ message: 'Current password and new password are required.' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({ message: 'New password must be at least 8 characters long.' });
+      return;
+    }
+
+    const user = await UserModel.findById(req.user._id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found.' });
+      return;
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      res.status(400).json({ message: 'Current password is incorrect.' });
+      return;
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, SALT_ROUNDS_PASSWORD);
+    user.password = hashedNewPassword;
+
+    await user.save();
+
+    console.log(`[Change Password] Password changed successfully for user: ${user.email}`);
+    res.status(200).json({ message: 'Password changed successfully.' });
+
+  } catch (err: any) {
+    console.error('Change Password Error:', err);
+    res.status(500).json({ message: `Password change failed: ${err.message || 'An unexpected error occurred.'}` });
+  }
+};

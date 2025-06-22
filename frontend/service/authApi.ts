@@ -82,3 +82,29 @@ return response.data; // This will return { message: '...', user: { ... } }
 throw error.response?.data || error.message;
 }
 };
+
+// Profile update function
+export const updateProfile = async (profileData: {
+  firstName?: string;
+  lastName?: string;
+  photoBase64?: string;
+}) => {
+  const response = await axiosInstance.put('/api/auth/profile', profileData);
+  return response.data;
+};
+
+// Change password function
+export const changePassword = async (passwordData: {
+  currentPassword: string;
+  newPassword: string;
+}) => {
+  try {
+    console.log('Sending password change request:', { currentPassword: '***', newPassword: '***' });
+    const response = await axiosInstance.put('/api/auth/change-password', passwordData);
+    console.log('Password change response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Password change API error:', error);
+    throw error;
+  }
+};

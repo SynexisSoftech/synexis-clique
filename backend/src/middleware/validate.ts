@@ -106,6 +106,29 @@ export const resetPasswordRules = (): ValidationChain[] => [
     .matches(passwordRegex).withMessage('New password must include uppercase, lowercase, number, and special character.'),
 ];
 
+export const updateProfileRules = (): ValidationChain[] => [
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 }).withMessage('First name must be 2-50 characters.'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 }).withMessage('Last name must be 2-50 characters.'),
+  body('photoBase64')
+    .optional()
+    .isString().withMessage('Photo must be a valid base64 string.'),
+];
+
+export const changePasswordRules = (): ValidationChain[] => [
+  body('currentPassword')
+    .notEmpty().withMessage('Current password is required.'),
+  body('newPassword')
+    .notEmpty().withMessage('New password is required.')
+    .isLength({ min: 8 }).withMessage('New password must be at least 8 characters.')
+    .matches(passwordRegex).withMessage('New password must include uppercase, lowercase, number, and special character.'),
+];
+
 // Middleware to handle validation results
 export const validate = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);

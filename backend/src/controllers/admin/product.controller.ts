@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+﻿import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Product, IProduct } from '../../models/product.model'; // Adjust path
 import { Category } from '../../models/category.model'; // Adjust path
