@@ -22,8 +22,7 @@ export default function HomePage() {
       <Hero />
       <CategoryShowcase />
       <ProductShowcase />
-      <GenderCategories />
-      <CategoryCom />
+    
       <NewArrivalsSection />
       <TopSalesSection />
       <FAQ />

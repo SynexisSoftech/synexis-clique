@@ -9,13 +9,30 @@ import { useRouter } from "next/navigation"
 
 interface AddToCartButtonProps {
   productId: string
+  productTitle?: string
+  selectedSize?: string
+  selectedColor?: string
+  quantity?: number
+  maxQuantity?: number
+  disabled?: boolean
   className?: string
   variant?: "default" | "outline" | "secondary"
   size?: "sm" | "default" | "lg"
 }
 
-export function AddToCartButton({ productId, className, variant = "default", size = "default" }: AddToCartButtonProps) {
-  const [quantity, setQuantity] = useState(1)
+export function AddToCartButton({ 
+  productId, 
+  productTitle,
+  selectedSize,
+  selectedColor,
+  quantity: initialQuantity = 1,
+  maxQuantity,
+  disabled = false,
+  className, 
+  variant = "default", 
+  size = "default" 
+}: AddToCartButtonProps) {
+  const [quantity, setQuantity] = useState(initialQuantity)
   const [isAdding, setIsAdding] = useState(false)
   const { addToCart, getItemQuantity, isLoading } = useCart()
   const { isAuthenticated } = useAuth()
@@ -45,12 +62,13 @@ export function AddToCartButton({ productId, className, variant = "default", siz
   }
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1) {
+    if (newQuantity >= 1 && (!maxQuantity || newQuantity <= maxQuantity)) {
       setQuantity(newQuantity)
     }
   }
 
   const isButtonLoading = isLoading || isAdding
+  const isDisabled = Boolean(disabled) || isButtonLoading
 
   return (
     <div className="flex items-center gap-2">
@@ -70,14 +88,14 @@ export function AddToCartButton({ productId, className, variant = "default", siz
               variant="ghost"
               size="sm"
               onClick={() => handleQuantityChange(quantity + 1)}
-              disabled={isButtonLoading}
+              disabled={isButtonLoading || (maxQuantity && quantity >= maxQuantity)}
             >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
           <Button
             onClick={handleAddToCart}
-            disabled={isButtonLoading}
+            disabled={isDisabled}
             variant={variant}
             size={size}
             className={className}
@@ -100,7 +118,7 @@ export function AddToCartButton({ productId, className, variant = "default", siz
           <span className="text-sm text-green-600 font-medium">In cart: {currentQuantity}</span>
           <Button
             onClick={handleAddToCart}
-            disabled={isButtonLoading}
+            disabled={isDisabled}
             variant="outline"
             size={size}
             className={className}

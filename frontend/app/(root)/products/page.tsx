@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
-  ShoppingCart,
   Filter,
   Grid3X3,
   List,
@@ -54,6 +53,7 @@ import ProductService, { type ProductDetails } from "../../../service/public/Pro
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
+import { AddToCartButton } from "@/components/AddToCartButton"
 
 // Helper function to map API product to UI product
 const mapApiProductToUiProduct = (product: ProductDetails) => {
@@ -840,23 +840,7 @@ export default function ProductsPage() {
         <main className="flex-1">
           <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 sm:py-8 lg:py-12">
             {/* Enhanced Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-8 sm:mb-12"
-            >
-              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium mb-4 sm:mb-6">
-                <Package className="h-4 w-4" />
-                Premium Collection
-              </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-amber-900 bg-clip-text text-transparent">
-                All Products
-              </h1>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Discover our carefully curated collection of premium products designed to exceed your expectations
-              </p>
-            </motion.div>
+      
 
             {/* Search and Sort Controls */}
             <motion.div
@@ -1065,7 +1049,7 @@ export default function ProductsPage() {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.3 }}
                       layout
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
                     >
                       <AnimatePresence>
                         {currentProducts.map((product, index) => (
@@ -1077,11 +1061,12 @@ export default function ProductsPage() {
                             transition={{ duration: 0.3, delay: index * 0.05 }}
                             layout
                             whileHover={{ y: -8 }}
+                            className="h-full"
                           >
-                            <Card className="overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-500 h-full group bg-white/90 backdrop-blur-sm hover:bg-white">
-                              <CardHeader className="p-0 relative">
+                            <Card className="overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-500 h-full group bg-white/90 backdrop-blur-sm hover:bg-white flex flex-col">
+                              <CardHeader className="p-0 relative flex-shrink-0">
                                 <Link href={`/products/${product.id}`} prefetch={true}>
-                                  <div className="overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 relative h-48 sm:h-56">
+                                  <div className="overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 relative h-40 sm:h-44">
                                     <Image
                                       src={product.image || "/placeholder.svg?height=400&width=400"}
                                       alt={product.name}
@@ -1146,7 +1131,7 @@ export default function ProductsPage() {
                                 </div>
                               </CardHeader>
 
-                              <CardContent className="p-3 sm:p-4">
+                              <CardContent className="p-2 sm:p-3 flex-1 flex flex-col">
                                 {/* Rating */}
                                 <div className="flex items-center gap-1 mb-1">
                                   {[...Array(5)].map((_, i) => (
@@ -1167,14 +1152,14 @@ export default function ProductsPage() {
                                 {/* Category */}
                                 <Badge
                                   variant="secondary"
-                                  className="mb-2 bg-amber-100 text-amber-800 hover:bg-amber-200 border-0"
+                                  className="mb-2 bg-amber-100 text-amber-800 hover:bg-amber-200 border-0 w-fit"
                                 >
                                   {product.category}
                                 </Badge>
 
                                 {/* Product Name */}
                                 <Link href={`/products/${product.id}`} prefetch={true}>
-                                  <h3 className="font-bold text-lg text-slate-900 hover:text-amber-800 transition-colors duration-300 line-clamp-2 mb-1">
+                                  <h3 className="font-bold text-sm sm:text-base text-slate-900 hover:text-amber-800 transition-colors duration-300 line-clamp-2 mb-1 min-h-[2.5rem] flex items-start">
                                     {product.name}
                                   </h3>
                                 </Link>
@@ -1239,18 +1224,18 @@ export default function ProductsPage() {
                                 )}
 
                                 {/* Price */}
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between mb-3">
                                   {product.discount > 0 ? (
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-bold text-lg text-amber-800">
+                                    <div className="flex flex-col gap-1">
+                                      <p className="font-bold text-base text-amber-800">
                                         NPR {product.finalPrice.toLocaleString()}
                                       </p>
-                                      <p className="text-sm text-slate-500 line-through">
+                                      <p className="text-xs text-slate-500 line-through">
                                         NPR {product.originalPrice.toLocaleString()}
                                       </p>
                                     </div>
                                   ) : (
-                                    <p className="font-bold text-lg text-amber-800">
+                                    <p className="font-bold text-base text-amber-800">
                                       NPR {product.price.toLocaleString()}
                                     </p>
                                   )}
@@ -1258,9 +1243,9 @@ export default function ProductsPage() {
                                 </div>
 
                                 {/* Stock and Services */}
-                                <div className="space-y-1">
+                                <div className="space-y-1 mb-3 flex-1">
                                   {product.stock <= 5 && product.stock > 0 && (
-                                    <div className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded">
+                                    <div className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded">
                                       Only {product.stock} left in stock
                                     </div>
                                   )}
@@ -1286,15 +1271,17 @@ export default function ProductsPage() {
                                 </div>
                               </CardContent>
 
-                              <CardFooter className="p-3 pt-0 sm:p-4 sm:pt-0">
-                                <Button
-                                  className="w-full bg-amber-800 hover:bg-amber-900 text-white transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-                                  onClick={() => handleAddToCart(product)}
-                                  disabled={product.stock <= 0 || product.status !== "active"}
-                                >
-                                  <ShoppingCart className="mr-2 h-4 w-4" />
-                                  {product.stock > 0 && product.status === "active" ? "Add to Cart" : "Out of Stock"}
-                                </Button>
+                              <CardFooter className="p-2 sm:p-3 pt-0 mt-auto">
+                                {product.status === "out-of-stock" || product.stock <= 0 ? (
+                                  <Button className="w-full bg-gray-300 text-gray-600 cursor-not-allowed" disabled>
+                                    Out of Stock
+                                  </Button>
+                                ) : (
+                                  <AddToCartButton
+                                    productId={product.id}
+                                    className="w-full bg-amber-800 hover:bg-amber-900 text-white transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+                                  />
+                                )}
                               </CardFooter>
                             </Card>
                           </motion.div>
@@ -1321,7 +1308,7 @@ export default function ProductsPage() {
                         >
                           <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 group bg-white/90 backdrop-blur-sm hover:bg-white">
                             <div className="flex flex-col sm:flex-row">
-                              <div className="sm:w-1/3 lg:w-1/4 relative">
+                              <div className="sm:w-1/3 lg:w-1/4 relative flex-shrink-0">
                                 <Link href={`/products/${product.id}`} prefetch={true}>
                                   <div className="overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 h-full min-h-[200px] sm:min-h-[250px]">
                                     <Image
@@ -1376,12 +1363,12 @@ export default function ProductsPage() {
                                 </div>
 
                                 <Link href={`/products/${product.id}`} prefetch={true}>
-                                  <h3 className="font-bold text-xl lg:text-2xl text-slate-900 hover:text-amber-800 transition-colors duration-300 mb-2">
+                                  <h3 className="font-bold text-xl lg:text-2xl text-slate-900 hover:text-amber-800 transition-colors duration-300 mb-2 line-clamp-2">
                                     {product.name}
                                   </h3>
                                 </Link>
 
-                                <p className="text-sm text-slate-600 mb-4 leading-relaxed line-clamp-3">
+                                <p className="text-sm text-slate-600 mb-4 leading-relaxed line-clamp-3 flex-1">
                                   {product.shortDescription || product.description}
                                 </p>
 
@@ -1529,17 +1516,20 @@ export default function ProductsPage() {
                                       <Eye className="h-4 w-4 mr-1" />
                                       Quick View
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      className="bg-amber-800 hover:bg-amber-900 text-white transition-all duration-200 hover:scale-105"
-                                      onClick={() => handleAddToCart(product)}
-                                      disabled={product.stock <= 0 || product.status !== "active"}
-                                    >
-                                      <ShoppingCart className="h-4 w-4 mr-1" />
-                                      {product.stock > 0 && product.status === "active"
-                                        ? "Add to Cart"
-                                        : "Out of Stock"}
-                                    </Button>
+                                    {product.status === "out-of-stock" || product.stock <= 0 ? (
+                                      <Button
+                                        size="sm"
+                                        className="bg-gray-300 text-gray-600 cursor-not-allowed"
+                                        disabled
+                                      >
+                                        Out of Stock
+                                      </Button>
+                                    ) : (
+                                      <AddToCartButton
+                                        productId={product.id}
+                                        className="bg-amber-800 hover:bg-amber-900 text-white transition-all duration-200 hover:scale-105"
+                                      />
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1833,19 +1823,16 @@ export default function ProductsPage() {
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                      <Button
-                        className="flex-1 bg-amber-800 hover:bg-amber-900 text-white"
-                        onClick={() => {
-                          addToCart(quickViewProduct, quickViewSize, quickViewQuantity)
-                          setQuickViewProduct(null)
-                        }}
-                        disabled={quickViewProduct.stock <= 0 || quickViewProduct.status !== "active"}
-                      >
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {quickViewProduct.stock > 0 && quickViewProduct.status === "active"
-                          ? "Add to Cart"
-                          : "Out of Stock"}
-                      </Button>
+                      {quickViewProduct.status === "out-of-stock" || quickViewProduct.stock <= 0 ? (
+                        <Button className="flex-1 bg-gray-300 text-gray-600 cursor-not-allowed" disabled>
+                          Out of Stock
+                        </Button>
+                      ) : (
+                        <AddToCartButton
+                          productId={quickViewProduct.id}
+                          className="flex-1 bg-amber-800 hover:bg-amber-900 text-white"
+                        />
+                      )}
                       <Button variant="outline" className="border-amber-200 text-amber-800 hover:bg-amber-50">
                         <Heart className="mr-2 h-4 w-4" />
                         Wishlist
