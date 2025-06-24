@@ -10,7 +10,14 @@ export const signupValidationRules = (): ValidationChain[] => [
   body('username')
     .optional()
     .trim()
-    .isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters if provided.'),
+    .custom((value) => {
+      if (value && value.length > 0) {
+        if (value.length < 3 || value.length > 30) {
+          throw new Error('Username must be 3-30 characters if provided.');
+        }
+      }
+      return true;
+    }),
   body('firstName')
     .trim()
     .notEmpty().withMessage('First name is required.')
@@ -28,12 +35,9 @@ export const signupValidationRules = (): ValidationChain[] => [
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
     .matches(passwordRegex).withMessage('Password must include uppercase, lowercase, number, and special character.'),
 
-  // Photo handling validation: at least one of photoBase64 or photoUrlInput must be present if required
+  // Photo handling validation: make photo optional
   body().custom((value, { req }) => {
     const { photoBase64, photoUrlInput } = req.body;
-    if (!photoBase64 && !photoUrlInput) {
-      throw new Error('Either a photo file (base64) or a photo URL is required.');
-    }
     // If photoUrlInput is present, validate it as a URL
     if (photoUrlInput && !/^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/.test(photoUrlInput)) {
         throw new Error('Invalid photo URL format.');
@@ -60,11 +64,11 @@ export const verifyOtpRules = (): ValidationChain[] => [
 export const verifyOtpAndCreateUserRules = (): ValidationChain[] => [
   ...verifyOtpRules(), // Includes email and OTP validation
   body('tempUserData').notEmpty().withMessage('Temporary user data is required.'),
-  body('tempUserData.username').trim().notEmpty().withMessage('Username in temporary data is required.'),
+  body('tempUserData.username').optional().trim(), // Make username optional
   body('tempUserData.email').trim().isEmail().withMessage('Invalid email in temporary data.').toLowerCase(),
   body('tempUserData.password').notEmpty().withMessage('Hashed password in temporary data is required.'),
   body('tempUserData.photoURL')
-    .notEmpty().withMessage('Photo URL in temporary data is required.')
+    .optional() // Make photoURL optional
     .isURL().withMessage('Invalid photo URL format.'), // This rule is still relevant as photoURL will be the final URL
   body('email').custom((value, { req }) => {
     if (req.body.tempUserData && value !== req.body.tempUserData.email) {

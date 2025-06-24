@@ -69,14 +69,15 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     } else {
       // If no photo is provided, you can set a default image URL here,
       // or return an error if a photo is mandatory for signup.
-      photoURL = undefined; // Or e.g., 'https://yourdomain.com/default-profile.png';
-      console.log('[Signup] No photo provided. Using default or null.');
+      photoURL = 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png'; // Replace with your default image URL
+      console.log('[Signup] No photo provided. Using default photo.');
     }
 
     // Optional: Enforce photo requirement.
     if (!photoURL) {
-      res.status(400).json({ message: 'Photo is required: Please provide an image file or a photo URL.' });
-      return;
+      // Set a default photo URL instead of requiring one
+      photoURL = 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png'; // Replace with your default image URL
+      console.log('[Signup] No photo provided. Using default photo.');
     }
 
     // 3. Hash the user's password for secure storage.

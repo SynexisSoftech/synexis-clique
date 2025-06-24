@@ -84,8 +84,18 @@ export default function SignupForm() {
       // Redirect to the OTP verification page
       router.push(`/auth/verify-signup?${queryParams}`)
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || "Signup failed. Please try again."
-      setError(errorMessage)
+      // Handle validation errors from backend
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // Format validation errors
+        const errorMessages = err.response.data.errors.map((error: any) => {
+          const field = Object.keys(error)[0];
+          return `${field}: ${error[field]}`;
+        }).join(', ');
+        setError(errorMessages);
+      } else {
+        const errorMessage = err.response?.data?.message || err.message || "Signup failed. Please try again."
+        setError(errorMessage)
+      }
       console.error("Signup error:", err)
     } finally {
       setIsLoading(false)
@@ -310,7 +320,7 @@ export default function SignupForm() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#6F4E37]/10 mb-4">
                           <Camera className="h-6 w-6 text-[#6F4E37]" />
                         </div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Upload Profile Photo</p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Upload Profile Photo (Optional)</p>
                         <p className="text-xs text-gray-500">Drag and drop or click to browse</p>
                       </div>
                       <Button

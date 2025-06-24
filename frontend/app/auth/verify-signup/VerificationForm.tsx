@@ -124,19 +124,17 @@ export default function VerificationForm() {
       }
     } catch (err: any) {
       console.error("Verification failed:", err)
-      if (err && err.errors && Array.isArray(err.errors)) {
-        const messages: string[] = []
-        err.errors.forEach((errorObj: any) => {
-          for (const key in errorObj) {
-            if (Object.prototype.hasOwnProperty.call(errorObj, key)) {
-              messages.push(errorObj[key])
-            }
-          }
-        })
-        setValidationErrors(messages)
-        setError(err.message || "Validation failed. Please check the details below.")
+      // Handle validation errors from backend
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // Format validation errors
+        const errorMessages = err.response.data.errors.map((error: any) => {
+          const field = Object.keys(error)[0];
+          return `${field}: ${error[field]}`;
+        });
+        setValidationErrors(errorMessages);
+        setError(err.response.data.message || "Validation failed. Please check the details below.");
       } else {
-        const errorMessage = err.message || err.toString() || "OTP verification failed. Please try again."
+        const errorMessage = err.response?.data?.message || err.message || "OTP verification failed. Please try again."
         setError(errorMessage)
       }
     } finally {
@@ -163,19 +161,17 @@ export default function VerificationForm() {
       setResendCooldown(60)
     } catch (err: any) {
       console.error("Resend OTP failed:", err)
-      if (err && err.errors && Array.isArray(err.errors)) {
-        const messages: string[] = []
-        err.errors.forEach((errorObj: any) => {
-          for (const key in errorObj) {
-            if (Object.prototype.hasOwnProperty.call(errorObj, key)) {
-              messages.push(errorObj[key])
-            }
-          }
-        })
-        setValidationErrors(messages)
-        setError(err.message || "Resend OTP failed. Please check the details below.")
+      // Handle validation errors from backend
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // Format validation errors
+        const errorMessages = err.response.data.errors.map((error: any) => {
+          const field = Object.keys(error)[0];
+          return `${field}: ${error[field]}`;
+        });
+        setValidationErrors(errorMessages);
+        setError(err.response.data.message || "Resend OTP failed. Please check the details below.");
       } else {
-        const errorMessage = err.message || err.toString() || "Failed to resend OTP. Please try again."
+        const errorMessage = err.response?.data?.message || err.message || "Failed to resend OTP. Please try again."
         setError(errorMessage)
       }
     } finally {
@@ -217,7 +213,9 @@ export default function VerificationForm() {
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
-                  ref={(el) => (inputRefs.current[index] = el)}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
                   className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 xl:w-16 xl:h-16 text-center text-sm sm:text-base md:text-lg lg:text-xl font-semibold border-2 border-gray-300 rounded-[4px] sm:rounded-[6px] focus:border-[#6F4E37] focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors"
                   maxLength={1}
                   inputMode="numeric"
