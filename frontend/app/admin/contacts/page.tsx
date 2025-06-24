@@ -227,6 +227,23 @@ export default function ContactsPage() {
     setIsViewModalOpen(true)
   }
 
+  const handleReply = (contact: IContactMessage) => {
+    // Create a mailto link with pre-filled subject and body
+    const subject = encodeURIComponent(`Re: ${getQueryTypeDisplayName(contact.queryType)} - ${contact.name}`)
+    const body = encodeURIComponent(`Dear ${contact.name},\n\nThank you for contacting us regarding your ${getQueryTypeDisplayName(contact.queryType).toLowerCase()}.\n\n[Your response here]\n\nBest regards,\n[Your Name]\n[Your Company]`)
+    
+    const mailtoLink = `mailto:${contact.email}?subject=${subject}&body=${body}`
+    
+    // Open the email client
+    window.open(mailtoLink, '_blank')
+    
+    // Show a toast notification
+    toast({
+      title: "Email Client Opened",
+      description: `Gmail should open with a reply to ${contact.email}`,
+    })
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -422,9 +439,9 @@ export default function ContactsPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => alert(`Replying to contact: ${contact._id}`)}>
+                            <DropdownMenuItem onClick={() => handleReply(contact)}>
                               <MessageSquare className="mr-2 h-4 w-4" />
-                              Reply
+                              Reply via Email
                             </DropdownMenuItem>
                             {contact.status === ContactQueryStatus.UNREAD && (
                               <DropdownMenuItem onClick={() => handleStatusUpdate(contact._id, ContactQueryStatus.READ)}>
@@ -578,10 +595,10 @@ export default function ContactsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => alert(`Reply to: ${selectedContact.email}`)}
+                  onClick={() => handleReply(selectedContact)}
                 >
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Reply
+                  Reply via Email
                 </Button>
                 <Button
                   size="sm"
