@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MoreHorizontal, Plus, Edit, Trash2, Eye } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import apiClient from "@/utils/axiosInstance"
 
 interface User {
   id: string
@@ -32,11 +33,8 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users")
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
-      }
+      const response = await apiClient.get("/api/admin/users")
+      setUsers(response.data)
     } catch (error) {
       console.error("Error fetching users:", error)
     } finally {

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import apiClient from "@/utils/axiosInstance"
 import { adminOrderService, type AdminOrder } from "../../../../service/orderService"
 
 interface UserProfile {
@@ -45,16 +46,12 @@ export default function UserProfilePage() {
         // Fetch user details and their orders
         // Note: You'll need to create these API endpoints in your backend
         const [userResponse, ordersResponse] = await Promise.all([
-          fetch(`/api/admin/users/${userId}`),
-          fetch(`/api/admin/users/${userId}/orders`)
+          apiClient.get(`/api/admin/users/${userId}`),
+          apiClient.get(`/api/admin/users/${userId}/orders`)
         ])
 
-        if (!userResponse.ok) {
-          throw new Error('User not found')
-        }
-
-        const userData = await userResponse.json()
-        const ordersData = await ordersResponse.json()
+        const userData = userResponse.data
+        const ordersData = ordersResponse.data
         
         setUser(userData)
         setUserOrders(ordersData.orders || [])

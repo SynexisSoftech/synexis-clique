@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Upload, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import apiClient from "@/utils/axiosInstance"
 
 export default function AddUserPage() {
   const router = useRouter()
@@ -54,13 +55,14 @@ export default function AddUserPage() {
         }
       })
 
-      const response = await fetch("/api/users", {
-        method: "POST",
-        body: submitData,
+      const response = await apiClient.post("/api/admin/users", submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       })
 
-      if (response.ok) {
-        router.push("/dashboard/users")
+      if (response.status === 201) {
+        router.push("/admin/users")
       } else {
         console.error("Failed to create user")
       }

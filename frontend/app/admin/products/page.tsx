@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Plus, Edit, Trash2, Eye } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { MoreHorizontal, Plus, Edit, Trash2, Eye, Search, X } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import Image from "next/image"
@@ -34,6 +35,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalProducts, setTotalProducts] = useState(0)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
   const getCategoryTitle = (category: any): string => {
     if (!category) return "N/A"
@@ -45,10 +48,28 @@ export default function ProductsPage() {
     return typeof subcategory === "object" ? subcategory.title : "Unknown"
   }
 
+  // Debounce search query to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearchQuery])
+
   const fetchData = async (currentPage = 1) => {
     setIsLoading(true)
     try {
-      const productsData: ProductsResponse = await productsService.getProducts({ page: currentPage, limit: 10 })
+      const productsData: ProductsResponse = await productsService.getProducts({ 
+        page: currentPage, 
+        limit: 10,
+        search: debouncedSearchQuery || undefined
+      })
 
       const displayProducts = productsData.products.map(
         (p: ServiceProduct): DisplayProduct => ({
@@ -77,7 +98,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchData(page)
-  }, [page])
+  }, [page, debouncedSearchQuery])
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
@@ -90,6 +111,10 @@ export default function ProductsPage() {
         console.error("Error deleting product:", error)
       }
     }
+  }
+
+  const handleClearSearch = () => {
+    setSearchQuery("")
   }
 
   const getStatusBadgeVariant = (status: DisplayProduct["status"]) => {
@@ -135,10 +160,44 @@ export default function ProductsPage() {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search products by title, category, or brand..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {debouncedSearchQuery && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Showing results for "{debouncedSearchQuery}"
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">All Products</CardTitle>
-          <CardDescription className="text-sm">A list of all products in your inventory.</CardDescription>
+          <CardDescription className="text-sm">
+            A list of all products in your inventory.
+            {debouncedSearchQuery && ` Filtered by: "${debouncedSearchQuery}"`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -155,75 +214,96 @@ export default function ProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product._id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Image
-                          src={product.images?.[0] || "/placeholder.svg?height=40&width=40"}
-                          alt={product.title}
-                          width={40}
-                          height={40}
-                          className="rounded-md object-cover bg-muted"
-                        />
-                        <span className="font-medium text-sm sm:text-base truncate">{product.title}</span>
+                {products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="text-center">
+                        <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-lg font-medium text-gray-900 mb-2">
+                          {debouncedSearchQuery ? "No products found" : "No products available"}
+                        </p>
+                        <p className="text-gray-500">
+                          {debouncedSearchQuery 
+                            ? `No products match "${debouncedSearchQuery}". Try a different search term.`
+                            : "Get started by adding your first product."
+                          }
+                        </p>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">{product.categoryDisplay}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">Rs{product.originalPrice.toFixed(2)}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {product.discountPrice ? `Rs${product.discountPrice.toFixed(2)}` : "-"}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">{product.stockQuantity}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(product.status)} className="text-xs">
-                        {product.status.charAt(0).toUpperCase() + product.status.slice(1).replace("-", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/products/view/${product._id}`}>
-                              <Eye className="mr-2 h-4 w-4" /> View
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/products/edit/${product._id}`}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-500"
-                            onClick={() => handleDelete(product._id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  products.map((product) => (
+                    <TableRow key={product._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Image
+                            src={product.images?.[0] || "/placeholder.svg?height=40&width=40"}
+                            alt={product.title}
+                            width={40}
+                            height={40}
+                            className="rounded-md object-cover bg-muted"
+                          />
+                          <span className="font-medium text-sm sm:text-base truncate">{product.title}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm">{product.categoryDisplay}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">Rs{product.originalPrice.toFixed(2)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        {product.discountPrice ? `Rs${product.discountPrice.toFixed(2)}` : "-"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm">{product.stockQuantity}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(product.status)} className="text-xs">
+                          {product.status.charAt(0).toUpperCase() + product.status.slice(1).replace("-", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/products/${product._id}`}>
+                                <Eye className="mr-2 h-4 w-4" /> View
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/products/edit/${product._id}`}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-500"
+                              onClick={() => handleDelete(product._id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-between mt-4">
-            <Button onClick={() => setPage(page - 1)} disabled={page <= 1 || isLoading}>
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
-            </span>
-            <Button onClick={() => setPage(page + 1)} disabled={page >= totalPages || isLoading}>
-              Next
-            </Button>
-          </div>
+          {products.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <Button onClick={() => setPage(page - 1)} disabled={page <= 1 || isLoading}>
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button onClick={() => setPage(page + 1)} disabled={page >= totalPages || isLoading}>
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -164,4 +164,47 @@ export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response,
       res.status(500).json({ message: 'Server error while updating order delivery status' });
     }
   }
-}
+};
+
+/**
+ * @desc    Get orders by product ID (admin view)
+ * @route   GET /api/admin/products/:productId/orders
+ * @access  Private/Admin
+ */
+export const getOrdersByProductId = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      res.status(400).json({ message: 'Invalid product ID format' });
+      return;
+    }
+
+    const pageSize = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 1;
+
+    // Find orders that contain the specified product in their items array
+    const query = {
+      'items.productId': req.params.productId
+    };
+
+    const count = await Order.countDocuments(query);
+    const orders = await Order.find(query)
+      .populate('userId', 'username email photoURL')
+      .populate({
+        path: 'items.productId',
+        select: 'title originalPrice discountPrice images',
+      })
+      .limit(pageSize)
+      .skip(pageSize * (page - 1))
+      .sort({ createdAt: -1 });
+
+    res.json({
+      orders,
+      page,
+      pages: Math.ceil(count / pageSize),
+      count,
+    });
+  } catch (error: any) {
+    console.error('[Admin Order Controller] Get Orders By Product ID Error:', error.message);
+    res.status(500).json({ message: 'Server error while fetching orders for product' });
+  }
+};

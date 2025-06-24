@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes'; // ✅ Import auth routes
 import { setupSwagger } from '../swagger'; // ✅ Import Swagger setup
 import cors from 'cors';
+import helmet from 'helmet'; // Add helmet for security headers
 
  // Add this line to import category routes
 import adminRouter from './routes/admin/admin.routes';
@@ -50,6 +51,25 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 };
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(cors(corsOptions))
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

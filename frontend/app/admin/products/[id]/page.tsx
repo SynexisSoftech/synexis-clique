@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import apiClient from "@/utils/axiosInstance"
 import { adminOrderService, type AdminOrder } from "../../../../service/orderService"
 
 interface ProductProfile {
@@ -48,16 +49,12 @@ export default function ProductProfilePage() {
         // Fetch product details and orders containing this product
         // Note: You'll need to create these API endpoints in your backend
         const [productResponse, ordersResponse] = await Promise.all([
-          fetch(`/api/admin/products/${productId}`),
-          fetch(`/api/admin/products/${productId}/orders`)
+          apiClient.get(`/api/admin/products/${productId}`),
+          apiClient.get(`/api/admin/products/${productId}/orders`)
         ])
 
-        if (!productResponse.ok) {
-          throw new Error('Product not found')
-        }
-
-        const productData = await productResponse.json()
-        const ordersData = await ordersResponse.json()
+        const productData = productResponse.data
+        const ordersData = ordersResponse.data
         
         setProduct(productData)
         setProductOrders(ordersData.orders || [])

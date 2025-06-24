@@ -149,15 +149,17 @@ const apiClient = axios.create({
   withCredentials: true,
 })
 
-// Function to get token from localStorage or wherever you store it
+// Global variable to store the in-memory token
+let inMemoryToken: string | null = null
+
+// Function to get token from in-memory storage
 const getStoredToken = (): string | null => {
-  // We don't store access tokens in localStorage anymore for security
-  // Tokens are stored in memory only and refreshed via HttpOnly cookies
-  return null
+  return inMemoryToken
 }
 
 // Function to update the token in the instance
 export const updateApiToken = (token: string | null) => {
+  inMemoryToken = token
   if (token) {
     apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`
   } else {
@@ -166,6 +168,7 @@ export const updateApiToken = (token: string | null) => {
 }
 
 export const clearApiToken = () => {
+  inMemoryToken = null
   delete apiClient.defaults.headers.common["Authorization"]
 }
 

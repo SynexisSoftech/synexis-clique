@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Plus, Edit, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MoreHorizontal, Plus, Edit, Trash2, Search } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { subcategoriesService, Subcategory as ISubcategory } from "../../../service/subcategories";
@@ -14,13 +15,27 @@ import AdminRouteGuard from "@/app/AdminRouteGuard";
 
 export default function SubcategoriesPage() {
   const [subcategories, setSubcategories] = useState<ISubcategory[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<ISubcategory[]>([]);
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Filter subcategories based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredSubcategories(subcategories);
+    } else {
+      const filtered = subcategories.filter((subcategory) =>
+        subcategory.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSubcategories(filtered);
+    }
+  }, [searchTerm, subcategories]);
 
   const fetchData = async () => {
     try {
@@ -91,6 +106,28 @@ export default function SubcategoriesPage() {
           </Button>
         </div>
 
+        {/* Search Bar */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search subcategories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {searchTerm && (
+            <Button
+              variant="outline"
+              onClick={() => setSearchTerm("")}
+              className="w-full sm:w-auto"
+            >
+              Clear Search
+            </Button>
+          )}
+        </div>
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
             <strong className="font-bold">Error:</strong>
@@ -102,14 +139,20 @@ export default function SubcategoriesPage() {
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl">All Subcategories</CardTitle>
             <CardDescription className="text-sm">
-              A list of all subcategories with their images.
+              {searchTerm 
+                ? `Showing ${filteredSubcategories.length} of ${subcategories.length} subcategories matching "${searchTerm}"`
+                : `A list of all ${subcategories.length} subcategories with their images.`
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              {subcategories.length === 0 ? (
+              {filteredSubcategories.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No subcategories found. Start by adding a new one!
+                  {searchTerm 
+                    ? `No subcategories found matching "${searchTerm}".`
+                    : "No subcategories found. Start by adding a new one!"
+                  }
                 </div>
               ) : (
                 <Table>
@@ -124,7 +167,7 @@ export default function SubcategoriesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subcategories.map((subcategory) => (
+                    {filteredSubcategories.map((subcategory) => (
                       <TableRow key={subcategory._id}>
                         <TableCell>
                           {subcategory.image ? (

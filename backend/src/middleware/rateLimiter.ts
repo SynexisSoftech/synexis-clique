@@ -26,3 +26,21 @@ export const otpGenerationLimiter = rateLimit({
     legacyHeaders: false,
     message: { message: 'Too many OTP requests. Please try again after 5 minutes.' },
 });
+
+// Admin-specific rate limiter for sensitive admin operations
+export const adminActionLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 200, // Increased from 50 to 200 for development
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many admin requests. Please try again after 5 minutes.' },
+});
+
+// Very strict limiter for critical admin operations (delete, create, update)
+export const adminCriticalActionLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 50, // Increased from 10 to 50 for development
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many critical admin actions. Please try again after 1 minute.' },
+});

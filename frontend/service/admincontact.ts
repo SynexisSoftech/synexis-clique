@@ -4,18 +4,20 @@ import apiClient from "../utils/axiosInstance"; // Adjust path to your axios ins
 
 // Enums to be shared between frontend and backend for consistency
 export enum ContactQueryStatus {
-  UNREAD = 'Unread',
-  READ = 'Read',
-  PENDING = 'Pending',
-  RESOLVED = 'Resolved',
-  SPAM = 'Spam',
+  UNREAD = 'UNREAD',
+  READ = 'READ',
+  PENDING_RESPONSE = 'PENDING_RESPONSE',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
 }
 
 export enum ContactQueryType {
-    GENERAL_INQUIRY = 'General Inquiry',
-    TECHNICAL_SUPPORT = 'Technical Support',
-    BILLING_QUESTION = 'Billing Question',
-    FEEDBACK = 'Feedback',
+  DELIVERY_OFFERS = 'DELIVERY_OFFERS',
+  GENERAL_QUERY = 'GENERAL_QUERY',
+  PAYMENT_ISSUES = 'PAYMENT_ISSUES',
+  ACCOUNT_HELP = 'ACCOUNT_HELP',
+  FEEDBACK = 'FEEDBACK',
+  OTHER = 'OTHER',
 }
 
 // Interface for a single contact message object from the API
