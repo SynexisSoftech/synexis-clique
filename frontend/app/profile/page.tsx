@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Eye, EyeOff, Upload, User, Lock, Camera, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Upload, User, Lock, Camera, KeyRound, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -41,6 +41,8 @@ export default function ProfilePage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<{ current?: string; new?: string; confirm?: string }>({});
+  const [passwordStrength, setPasswordStrength] = useState<'Weak' | 'Medium' | 'Strong' | ''>('');
 
   // --- SIDE EFFECTS ---
   useEffect(() => {
@@ -54,6 +56,19 @@ export default function ProfilePage() {
       setProfileForm({ firstName: user.firstName || '', lastName: user.lastName || '' });
     }
   }, [user]);
+
+  // Password strength checker
+  useEffect(() => {
+    if (!passwordForm.newPassword) {
+      setPasswordStrength('');
+      return;
+    }
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[A-Za-z\d\S]{12,}$/;
+    const medium = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d\S]{8,}$/;
+    if (strong.test(passwordForm.newPassword)) setPasswordStrength('Strong');
+    else if (medium.test(passwordForm.newPassword)) setPasswordStrength('Medium');
+    else setPasswordStrength('Weak');
+  }, [passwordForm.newPassword]);
 
   // --- EVENT HANDLERS ---
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,21 +126,19 @@ export default function ProfilePage() {
   };
 
   const handlePasswordUpdate = async () => {
-    // (This is the updated function from Step 3)
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({ title: "Passwords don't match", description: "New password and confirm password must match.", variant: "destructive" });
-      return;
+    let errors: { current?: string; new?: string; confirm?: string } = {};
+    if (!passwordForm.currentPassword) errors.current = 'Current password is required.';
+    if (!passwordForm.newPassword) errors.new = 'New password is required.';
+    if (!passwordForm.confirmPassword) errors.confirm = 'Please confirm your new password.';
+    if (passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirm = "New password and confirm password must match.";
     }
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[A-Za-z\d\S]{8,}$/;
-    if (!passwordRegex.test(passwordForm.newPassword)) {
-      toast({
-        title: "Password requirements not met",
-        description: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
+    if (passwordForm.newPassword && !passwordRegex.test(passwordForm.newPassword)) {
+      errors.new = "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.";
     }
+    setPasswordErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setIsUpdating(true);
     try {
       await changePassword({
@@ -134,9 +147,15 @@ export default function ProfilePage() {
       });
       toast({ title: "Password Changed", description: "Your password has been changed successfully." });
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordErrors({});
       setIsPasswordDialogOpen(false);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || "An unknown error occurred.";
+      if (errorMessage.toLowerCase().includes('current password')) {
+        setPasswordErrors((prev) => ({ ...prev, current: errorMessage }));
+      } else {
+        setPasswordErrors((prev) => ({ ...prev, new: errorMessage }));
+      }
       toast({
         title: "Password Change Failed",
         description: errorMessage,
@@ -230,55 +249,76 @@ export default function ProfilePage() {
           <CardContent className="flex flex-col items-start space-y-4">
               <p className="text-sm text-gray-700">Update your password to keep your account secure.</p>
               
-              <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+              <Dialog open={isPasswordDialogOpen} onOpenChange={(open) => {
+                setIsPasswordDialogOpen(open);
+                if (!open) {
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordErrors({});
+                  setPasswordStrength('');
+                }
+              }}>
                   <DialogTrigger asChild>
                       <Button variant="outline" className="flex items-center gap-2">
                           <KeyRound className="h-4 w-4" /> Change Password
                       </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[520px]">
                       <DialogHeader>
                           <DialogTitle>Change Password</DialogTitle>
                           <DialogDescription>
                               Enter your current password and a new password. Click save when you're done.
                           </DialogDescription>
                       </DialogHeader>
-                      <div className="grid gap-4 py-4">
+                      <div className="space-y-5 py-2">
                           {/* Current Password */}
-                          <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="currentPassword-modal" className="text-right">Current</Label>
-                              <div className="relative col-span-3">
-                                  <Input id="currentPassword-modal" name="currentPassword" type={showCurrentPassword ? "text" : "password"} value={passwordForm.currentPassword} onChange={handlePasswordFormChange} placeholder="Current password" />
-                                  <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                          <div>
+                              <Label htmlFor="currentPassword-modal">Current Password</Label>
+                              <div className="relative mt-1">
+                                  <Input id="currentPassword-modal" name="currentPassword" type={showCurrentPassword ? "text" : "password"} value={passwordForm.currentPassword} onChange={handlePasswordFormChange} placeholder="Current password" className="pr-10" />
+                                  <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
                                       {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                   </Button>
                               </div>
+                              {passwordErrors.current && <div className="text-xs text-red-600 mt-1">{passwordErrors.current}</div>}
                           </div>
                           {/* New Password */}
-                          <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="newPassword-modal" className="text-right">New</Label>
-                              <div className="relative col-span-3">
-                                  <Input id="newPassword-modal" name="newPassword" type={showNewPassword ? "text" : "password"} value={passwordForm.newPassword} onChange={handlePasswordFormChange} placeholder="New password" />
-                                  <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowNewPassword(!showNewPassword)}>
+                          <div>
+                              <Label htmlFor="newPassword-modal">New Password</Label>
+                              <div className="relative mt-1">
+                                  <Input id="newPassword-modal" name="newPassword" type={showNewPassword ? "text" : "password"} value={passwordForm.newPassword} onChange={handlePasswordFormChange} placeholder="New password" className="pr-10" />
+                                  <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowNewPassword(!showNewPassword)}>
                                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                   </Button>
                               </div>
+                              {passwordForm.newPassword && (
+                                  <div className="text-xs mt-1">
+                                      Password strength: <span className={
+                                          passwordStrength === 'Strong' ? 'text-green-600' :
+                                          passwordStrength === 'Medium' ? 'text-yellow-600' :
+                                          passwordStrength === 'Weak' ? 'text-red-600' : ''
+                                      }>{passwordStrength}</span>
+                                  </div>
+                              )}
+                              {passwordErrors.new && <div className="text-xs text-red-600 mt-1">{passwordErrors.new}</div>}
                           </div>
                           {/* Confirm Password */}
-                          <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="confirmPassword-modal" className="text-right">Confirm</Label>
-                              <div className="relative col-span-3">
-                                  <Input id="confirmPassword-modal" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} value={passwordForm.confirmPassword} onChange={handlePasswordFormChange} placeholder="Confirm new password" />
-                                  <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                          <div>
+                              <Label htmlFor="confirmPassword-modal">Confirm New Password</Label>
+                              <div className="relative mt-1">
+                                  <Input id="confirmPassword-modal" name="confirmPassword" type={showConfirmPassword ? "text" : "password"} value={passwordForm.confirmPassword} onChange={handlePasswordFormChange} placeholder="Confirm new password" className="pr-10" />
+                                  <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                   </Button>
                               </div>
+                              {passwordErrors.confirm && <div className="text-xs text-red-600 mt-1">{passwordErrors.confirm}</div>}
                           </div>
-                           <p className="text-sm text-gray-500 col-span-4 text-center px-4">Must be 8+ characters with uppercase, lowercase, number, & special character.</p>
+                          <p className="text-sm text-gray-500 text-center">
+                              Must be 8+ characters with uppercase, lowercase, number, & special character.
+                          </p>
                       </div>
                       <DialogFooter>
-                          <Button onClick={handlePasswordUpdate} disabled={isUpdating} className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white">
-                              {isUpdating ? "Saving..." : "Save Changes"}
+                          <Button onClick={handlePasswordUpdate} disabled={isUpdating} className="w-full bg-[#6F4E37] hover:bg-[#5d4230] text-white flex items-center justify-center py-3 rounded-lg text-base font-semibold">
+                              {isUpdating && <Loader2 className="animate-spin h-4 w-4 mr-2" />} {isUpdating ? "Saving..." : "Save Changes"}
                           </Button>
                       </DialogFooter>
                   </DialogContent>
