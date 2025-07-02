@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 import { getActiveHeroSlides, type IHeroSlide } from "../../../../service/public/heroPublicservice"
 
 export default function Hero() {
@@ -137,7 +138,10 @@ export default function Hero() {
 
   // 4. Success State
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
       className="relative w-full h-[500px] md:h-[600px] lg:h-[700px] overflow-hidden"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -167,25 +171,54 @@ export default function Hero() {
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-black/10" />
 
-              <div
-                className={cn(
-                  "absolute bottom-16 md:bottom-20 lg:bottom-24 left-8 md:left-12 lg:left-16 z-20 text-white max-w-lg",
-                  "transform transition-all duration-1000 ease-out",
-                  currentSlide === index ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0",
-                )}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ 
+                  opacity: currentSlide === index ? 1 : 0,
+                  y: currentSlide === index ? 0 : 30
+                }}
+                transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                className="absolute bottom-16 md:bottom-20 lg:bottom-24 left-8 md:left-12 lg:left-16 z-20 text-white max-w-lg"
               >
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wider mb-3 md:mb-4">
-                  {slide.title}
-                </h2>
-                <p className="text-sm md:text-base lg:text-lg mb-5 md:mb-6 opacity-90">{slide.subtitle}</p>
-                <Button
-                  variant="outline"
-                  className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-black transition-colors"
-                  asChild
+                <motion.h2 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: currentSlide === index ? 1 : 0,
+                    y: currentSlide === index ? 0 : 20
+                  }}
+                  transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wider mb-3 md:mb-4"
                 >
-                  <Link href={slide.ctaLink}>{slide.ctaText}</Link>
-                </Button>
-              </div>
+                  {slide.title}
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: currentSlide === index ? 1 : 0,
+                    y: currentSlide === index ? 0 : 20
+                  }}
+                  transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+                  className="text-sm md:text-base lg:text-lg mb-5 md:mb-6 opacity-90"
+                >
+                  {slide.subtitle}
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: currentSlide === index ? 1 : 0,
+                    y: currentSlide === index ? 0 : 20
+                  }}
+                  transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
+                >
+                  <Button
+                    variant="outline"
+                    className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-black transition-colors"
+                    asChild
+                  >
+                    <Link href={slide.ctaLink}>{slide.ctaText}</Link>
+                  </Button>
+                </motion.div>
+              </motion.div>
             </div>
           </div>
         ))}
@@ -195,52 +228,51 @@ export default function Hero() {
       {slideCount > 1 && (
         <>
           {/* Navigation arrows */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 1, ease: "easeOut" }}
             onClick={prevSlide}
             disabled={isTransitioning}
-            className={cn(
-              "absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-black/40 text-white",
-              "p-3 rounded-full transition-all duration-300 backdrop-blur-sm",
-              "transform hover:-translate-x-1",
-              isTransitioning ? "opacity-50 cursor-not-allowed" : "opacity-70 hover:opacity-100",
-            )}
-            aria-label="Previous slide"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors disabled:opacity-50"
           >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
+            <ChevronLeft className="w-6 h-6" />
+          </motion.button>
+
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 1, ease: "easeOut" }}
             onClick={nextSlide}
             disabled={isTransitioning}
-            className={cn(
-              "absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-black/40 text-white",
-              "p-3 rounded-full transition-all duration-300 backdrop-blur-sm",
-              "transform hover:translate-x-1",
-              isTransitioning ? "opacity-50 cursor-not-allowed" : "opacity-70 hover:opacity-100",
-            )}
-            aria-label="Next slide"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors disabled:opacity-50"
           >
-            <ChevronRight className="h-6 w-6" />
-          </button>
+            <ChevronRight className="w-6 h-6" />
+          </motion.button>
 
           {/* Slide indicators */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex space-x-3">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.2, ease: "easeOut" }}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2"
+          >
             {slides.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
                 disabled={isTransitioning}
                 className={cn(
-                  "transition-all duration-300 rounded-full",
-                  "flex items-center justify-center",
-                  index === currentSlide ? "bg-white w-8 h-2" : "bg-white/40 w-2 h-2 hover:bg-white/70",
+                  "w-3 h-3 rounded-full transition-all duration-300",
+                  currentSlide === index
+                    ? "bg-white scale-110"
+                    : "bg-white/50 hover:bg-white/70"
                 )}
-                aria-label={`Go to slide ${index + 1}`}
-                aria-current={index === currentSlide ? "true" : "false"}
               />
             ))}
-          </div>
+          </motion.div>
         </>
       )}
-    </div>
+    </motion.div>
   )
 }

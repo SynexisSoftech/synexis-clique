@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AddToCartButton } from "../../../../components/AddToCartButton"
 import ProductService, { type ProductDetails } from "../../../../service/public/Productservice"
+import { formatPrice, calculateDiscount } from "@/lib/utils"
 
 export function ProductShowcase() {
   const [products, setProducts] = useState<ProductDetails[]>([])
@@ -64,18 +65,6 @@ export function ProductShowcase() {
         behavior: "smooth",
       })
     }
-  }, [])
-
-  // Format price in simple Rs format with proper error handling
-  const formatPrice = useCallback((price: number | null | undefined) => {
-    // Handle invalid or missing price values
-    if (price == null || isNaN(price) || price < 0) {
-      return "Price not available"
-    }
-
-    // Convert to whole number and add commas for thousands
-    const formattedNumber = Math.round(price).toLocaleString("en-IN")
-    return `Rs${formattedNumber}`
   }, [])
 
   // Calculate discount percentage
@@ -161,7 +150,7 @@ export function ProductShowcase() {
           ) : (
             <div
               ref={scrollContainerRef}
-              className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide"
+              className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide animate-fadeIn"
             >
               {products.map((product) => (
                 <div key={product._id} className="w-[280px] flex-shrink-0 snap-start flex flex-col">
@@ -170,7 +159,7 @@ export function ProductShowcase() {
                     <Link href={`/products/${product._id}`}>
                       <div className="relative w-full aspect-square overflow-hidden">
                         <Image
-                          src={product.images[0] || "/placeholder.svg?height=300&width=300"}
+                          src={product.images[0] || "/placeholder.png"}
                           alt={product.title}
                           fill
                           className="object-cover transition-transform duration-300 hover:scale-105"
@@ -210,13 +199,13 @@ export function ProductShowcase() {
                       <div className="flex items-baseline mb-4">
                         {product.discountPrice && product.discountPrice > 0 ? (
                           <>
-                            <span className="text-lg font-bold text-primary">{formatPrice(product.discountPrice)}</span>
+                            <span className="text-lg font-bold text-primary">{formatPrice(product.discountPrice, 'NPR')}</span>
                             <span className="text-sm text-muted-foreground line-through ml-2">
-                              {formatPrice(product.originalPrice)}
+                              {formatPrice(product.originalPrice, 'NPR')}
                             </span>
                           </>
                         ) : (
-                          <span className="text-lg font-bold text-primary">{formatPrice(product.originalPrice)}</span>
+                          <span className="text-lg font-bold text-primary">{formatPrice(product.originalPrice, 'NPR')}</span>
                         )}
                       </div>
 

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import publicCategoryService, { type PublicCategory } from "../../../../service/public/categoryPublicService"
 import ProductService, { type ProductDetails, type ProductListResponse } from "../../../../service/public/Productservice"
 import ProductQuickViewModal from "../new-arrival/product-view"
+import { formatPrice, calculateDiscount } from "@/lib/utils"
 
 export default function TopSalesSection() {
   const [category, setCategory] = useState<PublicCategory | null>(null)
@@ -117,17 +118,6 @@ export default function TopSalesSection() {
     setIsModalOpen(true)
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price)
-  }
-
-  const calculateDiscount = (originalPrice: number, finalPrice: number) => {
-    return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
-  }
-
   if (loading) {
     return (
       <section className="py-12 bg-gradient-to-br from-orange-50 to-red-50">
@@ -232,7 +222,7 @@ export default function TopSalesSection() {
 
           {/* Products Grid */}
           {products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeIn">
               {products.map((product, index) => (
                 <Card
                   key={product._id}
@@ -322,10 +312,10 @@ export default function TopSalesSection() {
                       {product.brand && <p className="text-sm text-gray-500 mb-2">{product.brand}</p>}
 
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-orange-600">{formatPrice(product.finalPrice)}</span>
+                        <span className="text-lg font-bold text-orange-600">{formatPrice(product.finalPrice, 'NPR')}</span>
                         {product.discountPrice && (
                           <span className="text-sm text-gray-500 line-through">
-                            {formatPrice(product.originalPrice)}
+                            {formatPrice(product.originalPrice, 'NPR')}
                           </span>
                         )}
                       </div>

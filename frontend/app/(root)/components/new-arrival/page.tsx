@@ -13,6 +13,7 @@ import ProductService, {
   type ProductListResponse,
 } from "../../../../service/public/Productservice"
 import ProductQuickViewModal from "./product-view"
+import { formatPrice, calculateDiscount } from "@/lib/utils"
 
 export default function NewArrivalsSection() {
   const [category, setCategory] = useState<PublicCategory | null>(null)
@@ -91,17 +92,6 @@ export default function NewArrivalsSection() {
     setIsModalOpen(true)
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price)
-  }
-
-  const calculateDiscount = (originalPrice: number, finalPrice: number) => {
-    return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
-  }
-
   if (loading) {
     return (
       <section className="py-12 bg-gray-50">
@@ -155,9 +145,9 @@ export default function NewArrivalsSection() {
 
           {/* Products Grid */}
           {products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeIn">
               {products.map((product) => (
-                <Card key={product._id} className="group hover:shadow-lg transition-shadow duration-300">
+                <Card key={product._id} className="group hover:shadow-2xl transition-shadow duration-300">
                   <CardContent className="p-0">
                     <div className="relative overflow-hidden rounded-t-lg">
                       <Image
@@ -200,10 +190,10 @@ export default function NewArrivalsSection() {
                       {product.brand && <p className="text-sm text-gray-500 mb-2">{product.brand}</p>}
 
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-[#6F4E37]">{formatPrice(product.finalPrice)}</span>
+                        <span className="text-lg font-bold text-[#6F4E37]">{formatPrice(product.finalPrice, 'NPR')}</span>
                         {product.discountPrice && (
                           <span className="text-sm text-gray-500 line-through">
-                            {formatPrice(product.originalPrice)}
+                            {formatPrice(product.originalPrice, 'NPR')}
                           </span>
                         )}
                       </div>
@@ -227,7 +217,7 @@ export default function NewArrivalsSection() {
                           disabled={product.stockQuantity === 0}
                           asChild
                         >
-                          <Link href={`/products/${product._id}`}>
+                          <Link href={`/products/${product._id}`} className="focus-visible:ring-2 focus-visible:ring-orange-500">
                             <ShoppingCart className="h-4 w-4 mr-1" />
                             {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
                           </Link>
