@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Heart, Baby, Users, Star, Sparkles, Eye } from "lucide-react"
+import { ShoppingBag, Heart, Baby, Users, Star, Sparkles, Eye, TrendingUp, Award, Shield, Truck, Clock } from "lucide-react"
 import Image from "next/image"
 import Navbar from "../app/(root)/components/navbar/navbar"
 import Hero from "../app/(root)/components/hero/hero"
@@ -15,17 +15,43 @@ import NewArrivalsSection from "./(root)/components/new-arrival/page"
 import TopSalesSection from "./(root)/components/top-sales/page"
 import { ProductShowcase } from "./(root)/components/product-showcase/product-showcase"
 
+// New components we'll create
+import TrustBadges from "./(root)/components/trust-badges/trust-badges"
+import NewsletterSignup from "./(root)/components/newsletter/newsletter-signup"
+import FeaturesSection from "./(root)/components/features/features-section"
+
 export default function HomePage() {
   return (
     <>
       <Navbar />
+      
+      {/* Hero Section */}
       <Hero />
+      
+      {/* Trust Badges - Build Customer Confidence */}
+      <TrustBadges />
+         {/* Featured Products */}
+         <ProductShowcase />
+      
+      {/* Category Showcase */}
       <CategoryShowcase />
-      <ProductShowcase />
-    
+      
+      {/* Features Section - Why Choose Us */}
+      <FeaturesSection />
+      
+   
+      {/* New Arrivals */}
       <NewArrivalsSection />
+      
+      {/* Top Sales */}
       <TopSalesSection />
+      
+      {/* Newsletter Signup */}
+      <NewsletterSignup />
+      
+      {/* FAQ Section */}
       <FAQ />
+      
       <Footer />
       <ButtonTop />
     </>

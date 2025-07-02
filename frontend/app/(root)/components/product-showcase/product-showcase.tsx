@@ -109,7 +109,7 @@ export function ProductShowcase() {
         <Button
           onClick={fetchProducts}
           variant="outline"
-          className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
+          className="text-brand-primary border-brand-primary hover:bg-brand-secondary hover:text-white"
         >
           Try Again
         </Button>
@@ -118,16 +118,18 @@ export function ProductShowcase() {
   }
 
   return (
-    <section className="w-full py-8">
+    <section className="w-full py-16 bg-gradient-to-br from-gray-50 to-white">
       <div className="container px-4 md:px-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Featured Products</h2>
-            <p className="text-muted-foreground mt-1">Discover our amazing collection</p>
-          </div>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Featured Products</h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Discover our handpicked collection of premium products that our customers love
+          </p>
+        </div>
 
-          {/* Navigation Controls */}
+        {/* Navigation Controls */}
+        <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
@@ -135,7 +137,7 @@ export function ProductShowcase() {
               onClick={() => scroll("left")}
               disabled={loading}
               aria-label="Scroll left"
-              className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
+              className="text-brand-primary border-brand-primary hover:bg-brand-primary hover:text-white transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -145,7 +147,7 @@ export function ProductShowcase() {
               onClick={() => scroll("right")}
               disabled={loading}
               aria-label="Scroll right"
-              className="text-[#8B4513] border-[#8B4513] hover:bg-[#A0522D] hover:text-white"
+              className="text-brand-primary border-brand-primary hover:bg-brand-primary hover:text-white transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -237,7 +239,7 @@ export function ProductShowcase() {
                         <AddToCartButton
                           productId={product._id}
                           size="sm"
-                          className="w-full bg-[#8B4513] hover:bg-[#A0522D] text-white"
+                          className="w-full bg-brand-primary hover:bg-brand-secondary text-white"
                           variant={product.stockQuantity === 0 ? "outline" : "default"}
                         />
 
@@ -260,8 +262,8 @@ export function ProductShowcase() {
         </div>
 
         {/* View All Button */}
-        <div className="flex justify-center mt-6">
-          <Button asChild className="bg-[#8B4513] hover:bg-[#A0522D] text-white">
+        <div className="flex justify-center mt-12">
+          <Button asChild className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-3 text-lg font-semibold">
             <Link href="/products">View All Products</Link>
           </Button>
         </div>

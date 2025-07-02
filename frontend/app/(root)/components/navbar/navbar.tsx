@@ -183,7 +183,7 @@ export default function Navbar() {
             </Sheet>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center transition-opacity duration-200 hover:opacity-80">
+            <Link href="/" className="hidden lg:flex items-center transition-opacity duration-200 hover:opacity-80">
               <Image
                 src="/logo/logo.png"
                 className="h-10 lg:h-12 xl:h-14 object-contain"

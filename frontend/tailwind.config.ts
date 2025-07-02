@@ -12,8 +12,32 @@ const config: Config = {
   	extend: {
 		 fontFamily: {
         cormorant: ["var(--font-cormorant)", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        serif: ["var(--font-cormorant)", "serif"],
       },
   		colors: {
+        // Custom brown color palette
+        brown: {
+          50: '#fdf8f6',
+          100: '#f2e8e5',
+          200: '#eaddd7',
+          300: '#e0cec7',
+          400: '#d2bab0',
+          500: '#bfa094',
+          600: '#a18072',
+          700: '#977669',
+          800: '#846358',
+          900: '#43302b',
+          950: '#2d1b19',
+        },
+        // Your specific brand colors
+        brand: {
+          primary: '#6F4E37',
+          secondary: '#5d4230',
+          accent: '#8B6F47',
+          light: '#A0522D',
+          dark: '#43302b',
+        },
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

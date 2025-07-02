@@ -44,12 +44,17 @@ export default function TopSalesPage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductDetails | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Helper function to calculate final price
+  const calculateFinalPrice = (product: ProductDetails) => {
+    return product.discountPrice && product.discountPrice > 0 ? product.discountPrice : product.originalPrice
+  }
+
   // Available filter options extracted from all products
   const availableOptions = useMemo(() => {
     const brands = [...new Set(allProducts.map((p) => p.brand).filter(Boolean))] as string[]
     const colors = [...new Set(allProducts.flatMap((p) => p.colors || []))]
     const sizes = [...new Set(allProducts.flatMap((p) => p.sizes || []))]
-    const maxPrice = Math.max(...allProducts.map((p) => p.finalPrice || 0), 2000)
+    const maxPrice = Math.max(...allProducts.map((p) => calculateFinalPrice(p)), 2000)
 
     return { brands, colors, sizes, maxPrice }
   }, [allProducts])
@@ -68,7 +73,7 @@ export default function TopSalesPage() {
       }
 
       // Price range filter
-      const finalPrice = product.finalPrice || 0
+      const finalPrice = calculateFinalPrice(product)
       if (isNaN(finalPrice) || finalPrice < priceRange[0] || finalPrice > priceRange[1]) {
         return false
       }
@@ -105,10 +110,10 @@ export default function TopSalesPage() {
     // Sort products
     switch (sortBy) {
       case "price-asc":
-        filtered.sort((a, b) => (a.finalPrice || 0) - (b.finalPrice || 0))
+        filtered.sort((a, b) => calculateFinalPrice(a) - calculateFinalPrice(b))
         break
       case "price-desc":
-        filtered.sort((a, b) => (b.finalPrice || 0) - (a.finalPrice || 0))
+        filtered.sort((a, b) => calculateFinalPrice(b) - calculateFinalPrice(a))
         break
       case "name":
         filtered.sort((a, b) => a.title.localeCompare(b.title))
@@ -184,7 +189,7 @@ export default function TopSalesPage() {
 
         // Set initial price range based on actual product prices
         if (productResponse.products.length > 0) {
-          const prices = productResponse.products.map((p) => p.finalPrice || 0).filter(price => !isNaN(price))
+          const prices = productResponse.products.map((p) => calculateFinalPrice(p)).filter(price => !isNaN(price))
           if (prices.length > 0) {
             const minPrice = Math.min(...prices)
             const maxPrice = Math.max(...prices)
@@ -646,9 +651,9 @@ export default function TopSalesPage() {
 
                             {/* Badges */}
                             <div className="absolute top-3 right-3 flex flex-col gap-2">
-                              {product.discountPrice && (
+                              {product.discountPrice && product.discountPrice > 0 && (
                                 <Badge className="bg-red-500 text-white shadow-lg animate-pulse">
-                                  -{calculateDiscount(product.originalPrice, product.finalPrice)}% OFF
+                                  -{calculateDiscount(product.originalPrice, calculateFinalPrice(product))}% OFF
                                 </Badge>
                               )}
                               {product.stockQuantity === 0 && (
@@ -700,9 +705,9 @@ export default function TopSalesPage() {
 
                             <div className="flex items-center gap-2 mb-3">
                               <span className="text-lg font-bold text-orange-600">
-                                {formatPrice(product.finalPrice)}
+                                {formatPrice(calculateFinalPrice(product))}
                               </span>
-                              {product.discountPrice && (
+                              {product.discountPrice && product.discountPrice > 0 && (
                                 <span className="text-sm text-gray-500 line-through">
                                   {formatPrice(product.originalPrice)}
                                 </span>
