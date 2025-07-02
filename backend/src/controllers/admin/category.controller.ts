@@ -3,13 +3,14 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path a
 import { Category, ICategory } from '../../models/category.model'; // Adjust path as needed
 import mongoose from 'mongoose';
 import { uploadImageToCloudinary } from '../../services/cloudinary.service'; // Adjust path to your Cloudinary service
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Create a new category
  * @route   POST /api/admin/categories
  * @access  Private/Admin
  */
-export const createCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const createCategory = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     let { title, description, seoKeywords, tags, image, status } = req.body;
 
     if (!req.user) {
@@ -58,14 +59,14 @@ export const createCategory = async (req: AuthRequest, res: Response, next: Next
             res.status(500).json({ message: 'Server error while creating category' });
         }
     }
-};
+});
 
 /**
  * @desc    Get all categories
  * @route   GET /api/admin/categories
  * @access  Private/Admin
  */
-export const getAllCategories = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getAllCategories = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
@@ -93,14 +94,14 @@ export const getAllCategories = async (req: AuthRequest, res: Response, next: Ne
         console.error('[Admin Category Controller] Get All Categories Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching categories' });
     }
-};
+});
 
 /**
  * @desc    Get category by ID
  * @route   GET /api/admin/categories/:id
  * @access  Private/Admin
  */
-export const getCategoryById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getCategoryById = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid category ID format' });
@@ -116,14 +117,14 @@ export const getCategoryById = async (req: AuthRequest, res: Response, next: Nex
         console.error('[Admin Category Controller] Get Category By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching category' });
     }
-};
+});
 
 /**
  * @desc    Update a category
  * @route   PUT /api/admin/categories/:id
  * @access  Private/Admin
  */
-export const updateCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateCategory = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const { title, description, seoKeywords, tags, image, status } = req.body;
 
     try {
@@ -190,14 +191,14 @@ export const updateCategory = async (req: AuthRequest, res: Response, next: Next
             res.status(500).json({ message: 'Server error while updating category' });
         }
     }
-};
+});
 
 /**
  * @desc    Delete a category
  * @route   DELETE /api/admin/categories/:id
  * @access  Private/Admin
  */
-export const deleteCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const deleteCategory = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid category ID format' });
@@ -230,4 +231,4 @@ export const deleteCategory = async (req: AuthRequest, res: Response, next: Next
         console.error('[Admin Category Controller] Delete Category Error:', error.message);
         res.status(500).json({ message: 'Server error while deleting category' });
     }
-};
+});

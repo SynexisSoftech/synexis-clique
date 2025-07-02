@@ -3,13 +3,14 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Cart } from '../../models/cart.model'; // Adjust path
 import { Product } from '../../models/product.model'; // Adjust path
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get the logged-in user's cart
  * @route   GET /api/cart
  * @access  Private
  */
-export const getMyCart = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getMyCart = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized, user not found' });
@@ -35,14 +36,14 @@ export const getMyCart = async (req: AuthRequest, res: Response, next: NextFunct
         console.error('[Cart Controller] Get My Cart Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching cart' });
     }
-};
+});
 
 /**
  * @desc    Add or update an item in the cart
  * @route   POST /api/cart/items
  * @access  Private
  */
-export const addItemToCart = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const addItemToCart = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { productId, quantity } = req.body;
 
@@ -133,14 +134,14 @@ export const addItemToCart = async (req: AuthRequest, res: Response, next: NextF
         console.error('[Cart Controller] Add Item Error:', error.message);
         res.status(500).json({ message: 'Server error while adding item to cart' });
     }
-};
+});
 
 /**
  * @desc    Remove an item from the cart
  * @route   DELETE /api/cart/items/:productId
  * @access  Private
  */
-export const removeItemFromCart = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const removeItemFromCart = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { productId } = req.params;
 
@@ -174,14 +175,14 @@ export const removeItemFromCart = async (req: AuthRequest, res: Response, next: 
         console.error('[Cart Controller] Remove Item Error:', error.message);
         res.status(500).json({ message: 'Server error while removing item from cart' });
     }
-};
+});
 
 /**
  * @desc    Clear all items from the cart
  * @route   DELETE /api/cart
  * @access  Private
  */
-export const clearCart = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const clearCart = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized, user not found' });
@@ -202,14 +203,14 @@ export const clearCart = async (req: AuthRequest, res: Response, next: NextFunct
         console.error('[Cart Controller] Clear Cart Error:', error.message);
         res.status(500).json({ message: 'Server error while clearing cart' });
     }
-};
+});
 
 /**
  * @desc    Validate cart items (check stock and availability)
  * @route   POST /api/cart/validate
  * @access  Private
  */
-export const validateCart = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const validateCart = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized, user not found' });
@@ -304,4 +305,4 @@ export const validateCart = async (req: AuthRequest, res: Response, next: NextFu
         console.error('[Cart Controller] Validate Cart Error:', error.message);
         res.status(500).json({ message: 'Server error while validating cart' });
     }
-};
+});

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Order } from '../../models/order.model'; // Adjust path
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 // Audit logging function
 const logAuditEvent = (event: string, adminId: string, orderId: string, details: any) => {
@@ -13,7 +14,7 @@ const logAuditEvent = (event: string, adminId: string, orderId: string, details:
  * @route   GET /api/admin/orders
  * @access  Private/Admin
  */
-export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getAllOrders = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Security check
     if (!req.user || req.user.role !== 'admin') {
@@ -71,14 +72,14 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
     console.error('[Admin Order Controller] Get All Orders Error:', error.message);
     res.status(500).json({ message: 'Server error while fetching orders' });
   }
-};
+});
 
 /**
  * @desc    Get a single order by ID (admin view)
  * @route   GET /api/admin/orders/:id
  * @access  Private/Admin
  */
-export const getOrderById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getOrderById = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Security check
     if (!req.user || req.user.role !== 'admin') {
@@ -114,14 +115,14 @@ export const getOrderById = async (req: AuthRequest, res: Response, next: NextFu
     console.error('[Admin Order Controller] Get Order By ID Error:', error.message);
     res.status(500).json({ message: 'Server error while fetching order' });
   }
-};
+});
 
 /**
  * @desc    Update order status
  * @route   PUT /api/admin/orders/:id/status
  * @access  Private/Admin
  */
-export const updateOrderStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateOrderStatus = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -181,14 +182,14 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
   } finally {
     session.endSession();
   }
-};
+});
 
 /**
  * @desc    Update order delivery status
  * @route   PUT /api/admin/orders/:id/delivery-status
  * @access  Private/Admin
  */
-export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateOrderDeliveryStatus = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -248,14 +249,14 @@ export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response,
   } finally {
     session.endSession();
   }
-};
+});
 
 /**
  * @desc    Get orders by product ID (admin view)
  * @route   GET /api/admin/products/:productId/orders
  * @access  Private/Admin
  */
-export const getOrdersByProductId = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getOrdersByProductId = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Security check
     if (!req.user || req.user.role !== 'admin') {
@@ -305,4 +306,4 @@ export const getOrdersByProductId = async (req: AuthRequest, res: Response, next
     console.error('[Admin Order Controller] Get Orders By Product ID Error:', error.message);
     res.status(500).json({ message: 'Server error while fetching orders for product' });
   }
-};
+});

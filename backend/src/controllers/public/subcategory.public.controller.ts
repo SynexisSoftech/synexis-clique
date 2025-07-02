@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { Subcategory } from '../../models/subCategory.model'; // Adjust path
 import { Category } from '../../models/category.model'; // Adjust path
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Fetch all active subcategories, optionally filtered by parent category slug
  * @route   GET /api/public/subcategories?categorySlug=<slug>
  * @access  Public
  */
-export const getPublicSubcategories = async (req: Request, res: Response): Promise<void> => {
+export const getPublicSubcategories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
         const { categorySlug } = req.query;
 
@@ -36,14 +37,14 @@ export const getPublicSubcategories = async (req: Request, res: Response): Promi
         console.error('[Public Subcategory Controller] Get All Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching subcategories' });
     }
-};
+});
 
 /**
  * @desc    Fetch a single active subcategory by its slug and parent category's slug
  * @route   GET /api/public/subcategories/:categorySlug/:subcategorySlug
  * @access  Public
  */
-export const getPublicSubcategoryBySlug = async (req: Request, res: Response): Promise<void> => {
+export const getPublicSubcategoryBySlug = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
         const { categorySlug, subcategorySlug } = req.params;
 
@@ -75,4 +76,4 @@ export const getPublicSubcategoryBySlug = async (req: Request, res: Response): P
         console.error('[Public Subcategory Controller] Get By Slug Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching subcategory' });
     }
-};
+});

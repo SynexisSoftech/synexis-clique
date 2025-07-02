@@ -3,6 +3,7 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { SocialLink, ISocialLink } from '../../models/socialLink.model'; // Adjust path
 import mongoose from 'mongoose';
 import { uploadImageToCloudinary } from '../../services/cloudinary.service'; // Adjust path
+import { asyncHandler } from '../../utils/asyncHandler';
 
 // You might need a helper to extract the public ID from a Cloudinary URL to delete it
 // This is a basic example; you might need a more robust implementation.

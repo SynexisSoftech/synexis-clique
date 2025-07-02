@@ -4,13 +4,14 @@ import { Review } from '../../models/review.model'; // Adjust path
 import { Product } from '../../models/product.model'; // Adjust path
 import mongoose from 'mongoose';
 import { Order } from '../../models/order.model';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Create a new review for a product
  * @route   POST /api/products/:productId/reviews
  * @access  Private
  */
-export const createReview = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const createReview = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const { rating, comment } = req.body;
     const { productId } = req.params;
 
@@ -79,42 +80,38 @@ export const createReview = async (req: AuthRequest, res: Response, next: NextFu
             res.status(500).json({ message: 'Server error while creating review.' });
         }
     }
-};
+});
+
 /**
  * @desc    Get all active reviews for a specific product
  * @route   GET /api/products/:productId/reviews
  * @access  Public
  */
-export const getProductReviews = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const pageSize = Number(req.query.limit) || 5;
-        const page = Number(req.query.page) || 1;
+export const getProductReviews = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const pageSize = Number(req.query.limit) || 5;
+    const page = Number(req.query.page) || 1;
 
-        if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
-            res.status(400).json({ message: 'Invalid Product ID format' });
-            return;
-        }
-
-        const query = {
-            productId: req.params.productId,
-            status: 'active' // Only show 'active' reviews to the public
-        };
-
-        const count = await Review.countDocuments(query);
-        const reviews = await Review.find(query)
-            .limit(pageSize)
-            .skip(pageSize * (page - 1))
-            .populate('userId', 'username') // Only show username for privacy
-            .sort({ createdAt: -1 });
-
-        res.json({
-            reviews,
-            page,
-            pages: Math.ceil(count / pageSize),
-            count
-        });
-    } catch (error: any) {
-        console.error('[Review Controller] Get Product Reviews Error:', error.message);
-        res.status(500).json({ message: 'Server error while fetching product reviews' });
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+        res.status(400).json({ message: 'Invalid Product ID format' });
+        return;
     }
-};
+
+    const query = {
+        productId: req.params.productId,
+        status: 'active' // Only show 'active' reviews to the public
+    };
+
+    const count = await Review.countDocuments(query);
+    const reviews = await Review.find(query)
+        .limit(pageSize)
+        .skip(pageSize * (page - 1))
+        .populate('userId', 'username') // Only show username for privacy
+        .sort({ createdAt: -1 });
+
+    res.json({
+        reviews,
+        page,
+        pages: Math.ceil(count / pageSize),
+        count
+    });
+});

@@ -114,3 +114,9 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
 });
+
+export const newsletterRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: 'Too many newsletter requests from this IP, please try again later.'
+});

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Province } from '../../models/shipping.model';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all provinces with active cities for checkout

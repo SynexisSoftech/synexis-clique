@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { HeroSlide } from '../../models/heroSlide.model'; // Adjust path
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all active hero slides

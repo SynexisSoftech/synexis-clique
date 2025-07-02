@@ -2,13 +2,14 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Review, IReview } from '../../models/review.model'; // Adjust path
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all reviews (with pagination and filtering)
  * @route   GET /api/admin/reviews
  * @access  Private/Admin
  */
-export const getAllReviews = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllReviews = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
@@ -37,14 +38,14 @@ export const getAllReviews = async (req: AuthRequest, res: Response): Promise<vo
         console.error('[Admin Review Controller] Get All Reviews Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching reviews' });
     }
-};
+});
 
 /**
  * @desc    Get a single review by ID
  * @route   GET /api/admin/reviews/:id
  * @access  Private/Admin
  */
-export const getReviewById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getReviewById = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid review ID format' });
@@ -63,14 +64,14 @@ export const getReviewById = async (req: AuthRequest, res: Response): Promise<vo
         console.error('[Admin Review Controller] Get Review By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching review' });
     }
-};
+});
 
 /**
  * @desc    Update a review's status (approve, hide, flag)
  * @route   PUT /api/admin/reviews/:id/status
  * @access  Private/Admin
  */
-export const updateReviewStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateReviewStatus = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { status } = req.body;
 
     if (!status || !['pending', 'active', 'hidden', 'flagged'].includes(status)) {
@@ -99,7 +100,7 @@ export const updateReviewStatus = async (req: AuthRequest, res: Response): Promi
         console.error('[Admin Review Controller] Update Status Error:', error.message);
         res.status(500).json({ message: 'Server error while updating review status' });
     }
-};
+});
 
 
 /**
@@ -107,7 +108,7 @@ export const updateReviewStatus = async (req: AuthRequest, res: Response): Promi
  * @route   DELETE /api/admin/reviews/:id
  * @access  Private/Admin
  */
-export const deleteReview = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteReview = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid review ID format' });
@@ -126,4 +127,4 @@ export const deleteReview = async (req: AuthRequest, res: Response): Promise<voi
         console.error('[Admin Review Controller] Delete Review Error:', error.message);
         res.status(500).json({ message: 'Server error while deleting review' });
     }
-};
+});

@@ -3,13 +3,14 @@ import { Product } from '../../models/product.model';
 import { Category } from '../../models/category.model';
 import { Subcategory } from '../../models/subCategory.model';
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all active products (public view)
  * @route   GET /api/public/products
  * @access  Public
  */
-export const getAllPublicProducts = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getAllPublicProducts = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 12;
         const page = Number(req.query.page) || 1;
@@ -75,14 +76,14 @@ export const getAllPublicProducts = async (req: any, res: Response, next: NextFu
         console.error('[Public Product Controller] Get All Products Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching products' });
     }
-};
+});
 
 /**
  * @desc    Get product by ID or slug (public view)
  * @route   GET /api/public/products/:identifier
  * @access  Public
  */
-export const getPublicProductById = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getPublicProductById = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const { identifier } = req.params;
 
@@ -112,14 +113,14 @@ await product.save();
         console.error('[Public Product Controller] Get Product By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching product' });
     }
-};
+});
 
 /**
  * @desc    Get featured products
  * @route   GET /api/public/products/featured
  * @access  Public
  */
-export const getFeaturedProducts = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getFeaturedProducts = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const limit = Number(req.query.limit) || 8;
         
@@ -136,14 +137,14 @@ export const getFeaturedProducts = async (req: any, res: Response, next: NextFun
         console.error('[Public Product Controller] Get Featured Products Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching featured products' });
     }
-};
+});
 
 /**
  * @desc    Get products on sale
  * @route   GET /api/public/products/on-sale
  * @access  Public
  */
-export const getProductsOnSale = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getProductsOnSale = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const limit = Number(req.query.limit) || 8;
         
@@ -160,14 +161,14 @@ export const getProductsOnSale = async (req: any, res: Response, next: NextFunct
         console.error('[Public Product Controller] Get On Sale Products Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching products on sale' });
     }
-};
+});
 
 /**
  * @desc    Get related products
  * @route   GET /api/public/products/:id/related
  * @access  Public
  */
-export const getRelatedProducts = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getRelatedProducts = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const limit = Number(req.query.limit) || 4;
         
@@ -200,14 +201,14 @@ export const getRelatedProducts = async (req: any, res: Response, next: NextFunc
         console.error('[Public Product Controller] Get Related Products Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching related products' });
     }
-};
+});
 
 /**
  * @desc    Get products by category
  * @route   GET /api/public/products/category/:categoryId
  * @access  Public
  */
-export const getProductsByCategory = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getProductsByCategory = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 12;
         const page = Number(req.query.page) || 1;
@@ -254,14 +255,14 @@ export const getProductsByCategory = async (req: any, res: Response, next: NextF
         console.error('[Public Product Controller] Get Products By Category Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching products by category' });
     }
-};
+});
 
 /**
  * @desc    Get products by subcategory
  * @route   GET /api/public/products/subcategory/:subcategoryId
  * @access  Public
  */
-export const getProductsBySubcategory = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getProductsBySubcategory = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 12;
         const page = Number(req.query.page) || 1;
@@ -309,4 +310,4 @@ export const getProductsBySubcategory = async (req: any, res: Response, next: Ne
         console.error('[Public Product Controller] Get Products By Subcategory Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching products by subcategory' });
     }
-};
+});

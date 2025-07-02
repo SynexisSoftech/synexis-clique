@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import ContactUsModel from '../../models/contactUs.model'; // Adjust path as needed
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path as needed, used for optional user ID
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Create a new contact message

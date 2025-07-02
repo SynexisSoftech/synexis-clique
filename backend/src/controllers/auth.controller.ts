@@ -10,6 +10,7 @@ import * as TokenService from '../services/token.service'; // Assumes TokenServi
 import { uploadImageToCloudinary } from '../services/cloudinary.service'; // For handling image uploads
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AuditService } from '../services/audit.service';
+import { asyncHandler } from '../utils/asyncHandler';
 
 // --- Configuration Constants ---
 // Number of salt rounds for hashing user passwords. Higher is more secure, but slower.
@@ -31,7 +32,7 @@ const generateUsername = (firstName: string, lastName: string): string => {
  * hashes the password, and sends an OTP for email verification.
  * Does NOT directly create the user in the database; it prepares temporary data.
  */
-export const signup = async (req: Request, res: Response): Promise<void> => {
+export const signup = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // Destructure required fields from the request body.
   // photoBase64 for direct image file uploads, photoUrlInput for providing a URL.
   const { username, firstName, lastName, email, password, photoBase64, photoUrlInput } = req.body;
@@ -113,14 +114,14 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     console.error('Signup Error:', err);
     res.status(500).json({ message: `Signup failed: ${err.message || 'An unexpected error occurred. Please try again later.'}` });
   }
-};
+});
 
 // --- Verify Signup OTP & Create User Controller ---
 /**
  * Verifies the provided OTP for signup and, if valid, creates the new user account.
  * It uses the temporary user data passed from the initial signup request.
  */
-export const verifySignupOtpAndCreateUser = async (req: Request, res: Response): Promise<void> => {
+export const verifySignupOtpAndCreateUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // Destructure required fields from the request body.
   // `tempUserData` contains the hashed password and photoURL from the signup step.
   const { email, otp, tempUserData } = req.body;
@@ -213,14 +214,14 @@ export const verifySignupOtpAndCreateUser = async (req: Request, res: Response):
     console.error('Verify OTP & Create User Error:', err);
     res.status(500).json({ message: `Verification failed: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- Resend Signup OTP Controller ---
 /**
  * Allows a user to request a new signup OTP if the previous one expired or was not received.
  * It checks if the user is already verified to prevent unnecessary OTP generation.
  */
-export const resendSignupOtp = async (req: Request, res: Response): Promise<void> => {
+export const resendSignupOtp = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body; // Only email is needed for this operation.
 
   try {
@@ -251,7 +252,7 @@ export const resendSignupOtp = async (req: Request, res: Response): Promise<void
     console.error('Resend Signup OTP Error:', err);
     res.status(500).json({ message: `Failed to resend OTP: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- User Login Controller ---
 /**
@@ -259,7 +260,7 @@ export const resendSignupOtp = async (req: Request, res: Response): Promise<void
  * On successful login, it generates and sets authentication tokens.
  * Implements account lockout after failed attempts.
  */
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   // Account lockout configuration
@@ -373,14 +374,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     console.error('Login Error:', err);
     res.status(500).json({ message: `Login failed: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- Forgot Password (Send OTP) Controller ---
 /**
  * Initiates the password reset process by sending an OTP to the user's registered email.
  * It generates an alphanumeric OTP and stores a hashed version on the user model.
  */
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+export const forgotPassword = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body; // Only email is needed for this request.
 
   try {
@@ -417,13 +418,13 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     console.error('Forgot Password Error:', err);
     res.status(500).json({ message: `Forgot password request failed: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- Reset Password (Verify OTP and Update) Controller ---
 /**
  * Verifies the password reset OTP and updates the user's password if the OTP is valid and not expired.
  */
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { email, otp, newPassword } = req.body; // Required fields for password reset.
 
   try {
@@ -464,14 +465,14 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     console.error('Reset Password Error:', err);
     res.status(500).json({ message: `Password reset failed: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- Resend Forgot Password OTP Controller ---
 /**
  * Allows a user to request a new password reset OTP if the previous one expired or was not received.
  * This function essentially duplicates the logic of `forgotPassword` for user convenience.
  */
-export const resendForgotPasswordOtp = async (req: Request, res: Response): Promise<void> => {
+export const resendForgotPasswordOtp = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body; // Only email is needed.
 
   try {
@@ -507,14 +508,14 @@ export const resendForgotPasswordOtp = async (req: Request, res: Response): Prom
     console.error('Resend Forgot Password OTP Error:', err);
     res.status(500).json({ message: `Failed to resend password reset OTP: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
-};
+});
 
 // --- Get User Details Controller ---
 /**
  * Retrieves details for the authenticated user.
  * Uses AuthRequest to access user details populated by the 'protect' middleware.
  */
-export const getUserDetails = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getUserDetails = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     // req.user is populated by the 'protect' middleware and contains the authenticated user's data (excluding password)
     if (!req.user) {
         // This check is more of a safeguard; 'protect' middleware should handle unauthenticated access.
@@ -565,13 +566,13 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
         console.error('Get User Details Error:', err);
         res.status(500).json({ message: `Failed to retrieve user details: ${err.message || 'An unexpected error occurred.'}` });
     }
-};
+});
 
 // --- Refresh Token Controller ---
 /**
  * Handles refresh token requests to issue a new access token.
  */
-export const refreshTokenHandler = async (req: Request, res: Response): Promise<void> => {
+export const refreshTokenHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const incomingRefreshToken = req.cookies.refreshToken;
 
     if (!incomingRefreshToken) {
@@ -640,13 +641,13 @@ export const refreshTokenHandler = async (req: Request, res: Response): Promise<
         }
         res.status(500).json({ message: `Failed to refresh token: ${err.message || 'An unexpected error occurred.'}` });
     }
-};
+});
 
 // --- Logout Controller ---
 /**
  * Handles user logout by blacklisting the access token and clearing the refresh token cookie.
  */
-export const logout = async (req: Request, res: Response): Promise<void> => {
+export const logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     
@@ -703,13 +704,13 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     console.error('Logout Error:', err);
     res.status(500).json({ message: `Logout failed: ${err.message || 'An unexpected error occurred.'}` });
   }
-};
+});
 
 // --- Update Profile Controller ---
 /**
  * Updates user profile information (firstName, lastName, photoURL)
  */
-export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ message: 'Unauthorized: User data not available.' });
     return;
@@ -777,13 +778,13 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     console.error('Update Profile Error:', err);
     res.status(500).json({ message: `Profile update failed: ${err.message || 'An unexpected error occurred.'}` });
   }
-};
+});
 
 // --- Change Password Controller ---
 /**
  * Changes user password after verifying the old password
  */
-export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+export const changePassword = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ message: 'Unauthorized: User data not available.' });
     return;
@@ -829,4 +830,4 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
     console.error('Change Password Error:', err);
     res.status(500).json({ message: `Password change failed: ${err.message || 'An unexpected error occurred.'}` });
   }
-};
+});

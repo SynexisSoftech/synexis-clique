@@ -5,6 +5,7 @@ import { Category } from '../../models/category.model'; // Adjust path
 import { Subcategory } from '../../models/subCategory.model'; // Adjust path
 import mongoose from 'mongoose';
 import { uploadImageToCloudinary } from '../../services/cloudinary.service';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Create a new product

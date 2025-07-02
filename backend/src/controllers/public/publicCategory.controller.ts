@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Category } from '../../models/category.model'; // Adjust path as needed
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all active categories for public view

@@ -2,13 +2,14 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path as needed
 import { ContactInfo, IContactInfo } from '../../models/contactInfo.model'; // Adjust path as needed
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Create or Update Contact Info
  * @route   POST /api/admin/contact-info
  * @access  Private/Admin
  */
-export const createOrUpdateContactInfo = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const createOrUpdateContactInfo = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const { phoneNumbers, emails, locations } = req.body;
 
     if (!req.user) {
@@ -48,14 +49,14 @@ export const createOrUpdateContactInfo = async (req: AuthRequest, res: Response,
             res.status(500).json({ message: 'Server error while saving contact information' });
         }
     }
-};
+});
 
 /**
  * @desc    Update Contact Info by ID
  * @route   PUT /api/admin/contact-info/:id
  * @access  Private/Admin
  */
-export const updateContactInfo = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateContactInfo = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const { phoneNumbers, emails, locations } = req.body;
 
     if (!req.user) {
@@ -93,14 +94,14 @@ export const updateContactInfo = async (req: AuthRequest, res: Response, next: N
             res.status(500).json({ message: 'Server error while updating contact information' });
         }
     }
-};
+});
 
 /**
  * @desc    Get Contact Info
  * @route   GET /api/admin/contact-info
  * @access  Private/Admin
  */
-export const getContactInfo = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getContactInfo = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const contactInfo = await ContactInfo.findOne().populate('updatedBy', 'username email');
         if (contactInfo) {
@@ -113,14 +114,14 @@ export const getContactInfo = async (req: AuthRequest, res: Response, next: Next
         console.error('[Admin ContactInfo Controller] Get Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact information' });
     }
-};
+});
 
 /**
  * @desc    Get Contact Info by ID
  * @route   GET /api/admin/contact-info/:id
  * @access  Private/Admin
  */
-export const getContactInfoById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getContactInfoById = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid contact info ID format' });
@@ -136,14 +137,14 @@ export const getContactInfoById = async (req: AuthRequest, res: Response, next: 
         console.error('[Admin ContactInfo Controller] Get By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact information' });
     }
-};
+});
 
 /**
  * @desc    Delete Contact Info
  * @route   DELETE /api/admin/contact-info/:id
  * @access  Private/Admin
  */
-export const deleteContactInfo = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const deleteContactInfo = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid contact info ID format' });
@@ -162,4 +163,4 @@ export const deleteContactInfo = async (req: AuthRequest, res: Response, next: N
         console.error('[Admin ContactInfo Controller] Delete Error:', error.message);
         res.status(500).json({ message: 'Server error while deleting contact information' });
     }
-};
+});

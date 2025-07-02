@@ -1,13 +1,14 @@
 import { Response, NextFunction } from 'express';
 import { ContactInfo } from '../../models/contactInfo.model'; // Adjust path as needed
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get Public Contact Info
  * @route   GET /api/contact-info
  * @access  Public
  */
-export const getPublicContactInfo = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getPublicContactInfo = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         const contactInfo = await ContactInfo.findOne().select('-updatedBy -createdAt -updatedAt -__v');
         
@@ -29,14 +30,14 @@ export const getPublicContactInfo = async (req: any, res: Response, next: NextFu
         console.error('[Public ContactInfo Controller] Get Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact information' });
     }
-};
+});
 
 /**
  * @desc    Get Public Contact Info by ID
  * @route   GET /api/contact-info/:id
  * @access  Public
  */
-export const getPublicContactInfoById = async (req: any, res: Response, next: NextFunction): Promise<void> => {
+export const getPublicContactInfoById = asyncHandler(async (req: any, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid contact info ID format' });
@@ -58,4 +59,4 @@ export const getPublicContactInfoById = async (req: any, res: Response, next: Ne
         console.error('[Public ContactInfo Controller] Get By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact information' });
     }
-};
+});

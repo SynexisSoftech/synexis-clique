@@ -2,13 +2,14 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Cart } from '../../models/cart.model'; // Adjust path
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all user carts (paginated)
  * @route   GET /api/admin/carts
  * @access  Private/Admin
  */
-export const getAllCarts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getAllCarts = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
@@ -34,14 +35,14 @@ export const getAllCarts = async (req: AuthRequest, res: Response, next: NextFun
         console.error('[Admin Cart Controller] Get All Carts Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching carts' });
     }
-};
+});
 
 /**
  * @desc    Get a single cart by its ID
  * @route   GET /api/admin/carts/:id
  * @access  Private/Admin
  */
-export const getCartById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getCartById = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid cart ID format' });
@@ -65,4 +66,4 @@ export const getCartById = async (req: AuthRequest, res: Response, next: NextFun
         console.error('[Admin Cart Controller] Get Cart By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching cart' });
     }
-};
+});

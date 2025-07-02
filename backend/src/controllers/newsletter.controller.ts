@@ -4,12 +4,18 @@ import { asyncHandler } from "../utils/asyncHandler"
 import { ApiError } from "../utils/ApiError"
 import { ApiResponse } from "../utils/ApiResponse"
 
+const emailRegex = /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/;
+
 // Subscribe to newsletter
 const subscribeToNewsletter = asyncHandler(async (req: Request, res: Response) => {
   const { email, source = "homepage" } = req.body
 
   if (!email) {
     throw new ApiError(400, "Email is required")
+  }
+
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, "Invalid email format")
   }
 
   // Check if already subscribed
@@ -52,6 +58,10 @@ const unsubscribeFromNewsletter = asyncHandler(async (req: Request, res: Respons
 
   if (!email) {
     throw new ApiError(400, "Email is required")
+  }
+
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, "Invalid email format")
   }
 
   const subscription = await Newsletter.findOne({ email: email.toLowerCase() })
@@ -210,6 +220,17 @@ const exportNewsletterSubscribers = asyncHandler(async (req: Request, res: Respo
   return res.status(200).send(csvContent)
 })
 
+const NewsletterController = {
+  subscribeToNewsletter,
+  unsubscribeFromNewsletter,
+  getAllNewsletterSubscriptions,
+  getNewsletterStats,
+  deleteNewsletterSubscription,
+  exportNewsletterSubscribers,
+};
+
+export default NewsletterController;
+
 export {
   subscribeToNewsletter,
   unsubscribeFromNewsletter,
@@ -217,4 +238,4 @@ export {
   getNewsletterStats,
   deleteNewsletterSubscription,
   exportNewsletterSubscribers,
-} 
+}; 

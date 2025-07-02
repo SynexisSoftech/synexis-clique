@@ -4,13 +4,14 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path a
 import ContactUsModel, { IContactUs } from '../../models/contactUs.model'; // Gets the model
 import { ContactQueryStatus } from '../../common/enums'; // Gets the enum from its new location
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all contact messages with pagination and filtering
  * @route   GET /api/admin/contact-us
  * @access  Private/Admin
  */
-export const getAllContactMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllContactMessages = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
@@ -42,14 +43,14 @@ export const getAllContactMessages = async (req: AuthRequest, res: Response): Pr
         console.error('[Admin Contact Controller] Get All Messages Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact messages' });
     }
-};
+});
 
 /**
  * @desc    Get a single contact message by ID
  * @route   GET /api/admin/contact-us/:id
  * @access  Private/Admin
  */
-export const getContactMessageById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getContactMessageById = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid message ID format' });
@@ -67,14 +68,14 @@ export const getContactMessageById = async (req: AuthRequest, res: Response): Pr
         console.error('[Admin Contact Controller] Get Message By ID Error:', error.message);
         res.status(500).json({ message: 'Server error while fetching contact message' });
     }
-};
+});
 
 /**
  * @desc    Update a contact message's status or add admin notes
  * @route   PUT /api/admin/contact-us/:id
  * @access  Private/Admin
  */
-export const updateContactMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateContactMessage = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { status, adminNotes } = req.body;
 
     try {
@@ -109,7 +110,7 @@ export const updateContactMessage = async (req: AuthRequest, res: Response): Pro
             res.status(500).json({ message: 'Server error while updating contact message' });
         }
     }
-};
+});
 
 
 /**
@@ -117,7 +118,7 @@ export const updateContactMessage = async (req: AuthRequest, res: Response): Pro
  * @route   DELETE /api/admin/contact-us/:id
  * @access  Private/Admin
  */
-export const deleteContactMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteContactMessage = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             res.status(400).json({ message: 'Invalid message ID format' });
@@ -138,4 +139,4 @@ export const deleteContactMessage = async (req: AuthRequest, res: Response): Pro
         console.error('[Admin Contact Controller] Delete Message Error:', error.message);
         res.status(500).json({ message: 'Server error while deleting contact message' });
     }
-};
+});

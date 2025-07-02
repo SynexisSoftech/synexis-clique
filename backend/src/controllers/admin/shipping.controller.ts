@@ -2,13 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware';
 import { Province, IProvince, ICity } from '../../models/shipping.model';
 import mongoose from 'mongoose';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 /**
  * @desc    Get all provinces with their cities
  * @route   GET /api/admin/shipping/provinces
  * @access  Private (Admin)
  */
-export const getAllProvinces = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getAllProvinces = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const provinces = await Province.find({ isActive: true }).sort({ name: 1 });
     
@@ -24,14 +25,14 @@ export const getAllProvinces = async (req: AuthRequest, res: Response, next: Nex
       message: 'Server error while fetching provinces' 
     });
   }
-};
+});
 
 /**
  * @desc    Get single province with cities
  * @route   GET /api/admin/shipping/provinces/:id
  * @access  Private (Admin)
  */
-export const getProvinceById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const getProvinceById = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const province = await Province.findById(req.params.id);
     
@@ -54,14 +55,14 @@ export const getProvinceById = async (req: AuthRequest, res: Response, next: Nex
       message: 'Server error while fetching province' 
     });
   }
-};
+});
 
 /**
  * @desc    Create new province
  * @route   POST /api/admin/shipping/provinces
  * @access  Private (Admin)
  */
-export const createProvince = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const createProvince = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name } = req.body;
 
@@ -89,14 +90,14 @@ export const createProvince = async (req: AuthRequest, res: Response, next: Next
       message: 'Server error while creating province' 
     });
   }
-};
+});
 
 /**
  * @desc    Add city to province
  * @route   POST /api/admin/shipping/provinces/:provinceId/cities
  * @access  Private (Admin)
  */
-export const addCityToProvince = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const addCityToProvince = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, shippingCharge } = req.body;
     const { provinceId } = req.params;
@@ -141,14 +142,14 @@ export const addCityToProvince = async (req: AuthRequest, res: Response, next: N
       message: 'Server error while adding city' 
     });
   }
-};
+});
 
 /**
  * @desc    Update city shipping charge
  * @route   PUT /api/admin/shipping/provinces/:provinceId/cities/:cityId
  * @access  Private (Admin)
  */
-export const updateCityShippingCharge = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateCityShippingCharge = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { shippingCharge, isActive } = req.body;
     const { provinceId, cityId } = req.params;
@@ -200,14 +201,14 @@ export const updateCityShippingCharge = async (req: AuthRequest, res: Response, 
       message: 'Server error while updating city' 
     });
   }
-};
+});
 
 /**
  * @desc    Delete city from province
  * @route   DELETE /api/admin/shipping/provinces/:provinceId/cities/:cityId
  * @access  Private (Admin)
  */
-export const deleteCityFromProvince = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const deleteCityFromProvince = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { provinceId, cityId } = req.params;
     
@@ -264,14 +265,14 @@ export const deleteCityFromProvince = async (req: AuthRequest, res: Response, ne
       message: 'Server error while deleting city' 
     });
   }
-};
+});
 
 /**
  * @desc    Update province name
  * @route   PUT /api/admin/shipping/provinces/:id
  * @access  Private (Admin)
  */
-export const updateProvince = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const updateProvince = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name } = req.body;
     const { id } = req.params;
@@ -310,14 +311,14 @@ export const updateProvince = async (req: AuthRequest, res: Response, next: Next
       message: 'Server error while updating province' 
     });
   }
-};
+});
 
 /**
  * @desc    Delete province
  * @route   DELETE /api/admin/shipping/provinces/:id
  * @access  Private (Admin)
  */
-export const deleteProvince = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const deleteProvince = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -352,4 +353,4 @@ export const deleteProvince = async (req: AuthRequest, res: Response, next: Next
       message: 'Server error while deleting province' 
     });
   }
-}; 
+}); 

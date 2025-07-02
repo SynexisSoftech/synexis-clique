@@ -3,13 +3,14 @@
 import { Request, Response } from 'express';
 import UserModel, { UserRole } from '../../models/user.model';
 import { AuthRequest } from '../../middleware/auth.middleware'; // Import your custom AuthRequest
+import { asyncHandler } from './src/utils/asyncHandler';
 
 /**
  * @desc    Get all users (admin only)
  * @route   GET /api/admin/users
  * @access  Private/Admin
  */
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     // Find all users but exclude their sensitive data
     const users = await UserModel.find({}).select('-password -passwordResetOTP -passwordResetExpires');
@@ -22,14 +23,14 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
     console.error('Admin Get All Users Error:', err);
     res.status(500).json({ message: `Failed to retrieve users: ${err.message}` });
   }
-};
+});
 
 /**
  * @desc    Change a user's role (admin only)
  * @route   PATCH /api/admin/users/:userId/role
  * @access  Private/Admin
  */
-export const changeUserRole = async (req: AuthRequest, res: Response): Promise<void> => {
+export const changeUserRole = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { userId } = req.params;
     const { role } = req.body;
 
@@ -70,14 +71,14 @@ export const changeUserRole = async (req: AuthRequest, res: Response): Promise<v
         console.error('Admin Change User Role Error:', err);
         res.status(500).json({ message: `Failed to update user role: ${err.message}` });
     }
-};
+});
 
 /**
  * @desc    Block or unblock a user (admin only)
  * @route   PATCH /api/admin/users/:userId/block
  * @access  Private/Admin
  */
-export const toggleUserBlockStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const toggleUserBlockStatus = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { userId } = req.params;
     const { isBlocked } = req.body;
 
@@ -114,4 +115,4 @@ export const toggleUserBlockStatus = async (req: AuthRequest, res: Response): Pr
         console.error('Admin Toggle Block Status Error:', err);
         res.status(500).json({ message: `Failed to update user status: ${err.message}` });
     }
-};
+});

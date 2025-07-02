@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { Product } from '../../models/product.model'; // Adjust path
 import crypto from 'crypto';
 import { sendOrderConfirmationEmail } from '../../services/email.service';
+import { asyncHandler } from '../../utils/asyncHandler';
 
 import { ESEWA_CONFIG } from '../../config/esewa.config';
 
@@ -511,11 +512,18 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
       const product = await Product.findById(item.productId).session(session);
       
       if (!product) {
-        throw new Error(`Product not found: ${item.productId}`);
+        await session.abortTransaction();
+        console.error(`[Payment Verification] Product not found: ${item.productId}`);
+        res.status(404).json({ message: `Product not found: ${item.productId}` });
+        return;
       }
 
+      // Final stock check inside transaction
       if (product.stockQuantity < item.quantity) {
-        throw new Error(`Insufficient stock for product: ${product.title}`);
+        await session.abortTransaction();
+        console.error(`[Payment Verification] Insufficient stock for product: ${product.title}`);
+        res.status(400).json({ message: `Insufficient stock for product: ${product.title}` });
+        return;
       }
 
       product.stockQuantity -= item.quantity;
