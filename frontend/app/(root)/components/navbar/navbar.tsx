@@ -1,6 +1,7 @@
 "use client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+
 import { Menu, X } from "lucide-react"
 import Image from "next/image"
 
@@ -10,7 +11,6 @@ import { useAuth } from "../../../context/AuthContext"
 import { useCart } from "@/hooks/useCart"
 
 // Import the separate components
-import SearchComponent from "../search-bar/search-bar"
 import CartDropdown from "./cart-dropdown"
 import ProfileDropdown from "../profile-dropdown/profile-dropdown"
 
@@ -73,12 +73,9 @@ export default function Navbar() {
                     <Link href="/" className="flex items-center">
                       <Image src="/logo/logo.png" className="h-12 object-contain" width={120} height={48} alt="Logo" />
                     </Link>
-                    <SheetClose asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <X className="h-4 w-4 text-[#6F4E37]" />
-                      </Button>
-                    </SheetClose>
                   </div>
+
+
 
                   {/* Mobile User Info */}
                   {!authLoading && isAuthenticated && user && (
@@ -213,13 +210,9 @@ export default function Navbar() {
 
           {/* Right Section - Actions */}
           <div className="flex items-center space-x-2 lg:space-x-3">
-            {/* Search Component */}
-            <div className="hidden sm:block">
-              <SearchComponent onSearch={handleSearch} />
-            </div>
 
             {/* Cart Dropdown - This one has API integration */}
-            <CartDropdown count={cartItemsCount} onClick={handleCartClick} />
+            <CartDropdown onClick={handleCartClick} />
 
             {/* Desktop: Sign In Button or Profile Dropdown */}
             {!authLoading && (
@@ -240,10 +233,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
-        <div className="sm:hidden pb-3">
-          <SearchComponent onSearch={handleSearch} />
-        </div>
+
       </div>
     </header>
   )

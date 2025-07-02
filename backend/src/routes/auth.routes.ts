@@ -313,6 +313,7 @@ import {
 } from '../middleware/validate';
 import { authActionLimiter, otpGenerationLimiter } from '../middleware/rateLimiter';
 import { protect } from '../middleware/auth.middleware';
+import { getCSRFToken, csrfProtection } from '../middleware/csrf.middleware';
 
 const router = express.Router();
 
@@ -398,6 +399,7 @@ router.post(
 router.put(
     '/profile',
     protect,
+    csrfProtection,
     updateProfileRules(),
     validate,
     AuthController.updateProfile
@@ -408,9 +410,17 @@ router.put(
 router.put(
     '/change-password',
     protect,
+    csrfProtection,
     changePasswordRules(),
     validate,
     AuthController.changePassword
+);
+
+// --- CSRF Token ---
+// This route provides CSRF tokens for form protection
+router.get(
+    '/csrf-token',
+    getCSRFToken
 );
 
 export default router;

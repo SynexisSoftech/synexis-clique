@@ -46,10 +46,10 @@ export default function TopSalesPage() {
 
   // Available filter options extracted from all products
   const availableOptions = useMemo(() => {
-    const brands = [...new Set(allProducts.map((p) => p.brand).filter(Boolean))]
+    const brands = [...new Set(allProducts.map((p) => p.brand).filter(Boolean))] as string[]
     const colors = [...new Set(allProducts.flatMap((p) => p.colors || []))]
     const sizes = [...new Set(allProducts.flatMap((p) => p.sizes || []))]
-    const maxPrice = Math.max(...allProducts.map((p) => p.finalPrice), 2000)
+    const maxPrice = Math.max(...allProducts.map((p) => p.finalPrice || 0), 2000)
 
     return { brands, colors, sizes, maxPrice }
   }, [allProducts])
@@ -68,7 +68,8 @@ export default function TopSalesPage() {
       }
 
       // Price range filter
-      if (product.finalPrice < priceRange[0] || product.finalPrice > priceRange[1]) {
+      const finalPrice = product.finalPrice || 0
+      if (isNaN(finalPrice) || finalPrice < priceRange[0] || finalPrice > priceRange[1]) {
         return false
       }
 
@@ -104,10 +105,10 @@ export default function TopSalesPage() {
     // Sort products
     switch (sortBy) {
       case "price-asc":
-        filtered.sort((a, b) => a.finalPrice - b.finalPrice)
+        filtered.sort((a, b) => (a.finalPrice || 0) - (b.finalPrice || 0))
         break
       case "price-desc":
-        filtered.sort((a, b) => b.finalPrice - a.finalPrice)
+        filtered.sort((a, b) => (b.finalPrice || 0) - (a.finalPrice || 0))
         break
       case "name":
         filtered.sort((a, b) => a.title.localeCompare(b.title))
@@ -183,10 +184,12 @@ export default function TopSalesPage() {
 
         // Set initial price range based on actual product prices
         if (productResponse.products.length > 0) {
-          const prices = productResponse.products.map((p) => p.finalPrice)
-          const minPrice = Math.min(...prices)
-          const maxPrice = Math.max(...prices)
-          setPriceRange([Math.floor(minPrice), Math.ceil(maxPrice)])
+          const prices = productResponse.products.map((p) => p.finalPrice || 0).filter(price => !isNaN(price))
+          if (prices.length > 0) {
+            const minPrice = Math.min(...prices)
+            const maxPrice = Math.max(...prices)
+            setPriceRange([Math.floor(minPrice), Math.ceil(maxPrice)])
+          }
         }
       } catch (err: any) {
         console.error("Error fetching initial data:", err)
@@ -221,13 +224,14 @@ export default function TopSalesPage() {
   }, [])
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price)
+    if (!price || isNaN(price)) return "NPR 0"
+    return `NPR ${price.toLocaleString()}`
   }
 
   const calculateDiscount = (originalPrice: number, finalPrice: number) => {
+    if (!originalPrice || !finalPrice || isNaN(originalPrice) || isNaN(finalPrice) || originalPrice === 0) {
+      return 0
+    }
     return Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
   }
 
@@ -269,8 +273,8 @@ export default function TopSalesPage() {
           className="mb-2"
         />
         <div className="flex justify-between text-xs text-gray-500">
-          <span>${0}</span>
-          <span>${availableOptions.maxPrice}</span>
+          <span>NPR 0</span>
+          <span>NPR {availableOptions.maxPrice.toLocaleString()}</span>
         </div>
       </div>
 

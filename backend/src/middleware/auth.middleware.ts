@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import UserModel, { IUser, UserRole } from '../models/user.model'; // Adjust path as per your project structure
+import UserModel, { IUser, UserRole } from '../models/user.model';
+import BlacklistedToken from '../models/blacklistedToken.model';
 
 // Ensure ACCESS_TOKEN_SECRET is loaded from environment variables
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -32,7 +33,14 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
             // 2. Extract token from "Bearer <token>"
             token = req.headers.authorization.split(' ')[1];
 
-            // 3. Verify the token using the access token secret
+            // 3. Check if token is blacklisted
+            const isBlacklisted = await BlacklistedToken.isBlacklisted(token);
+            if (isBlacklisted) {
+                res.status(401).json({ message: 'Token has been revoked. Please log in again.' });
+                return;
+            }
+
+            // 4. Verify the token using the access token secret
             const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET) as { userId: string };
 
             // 4. Fetch user details from database using userId from token

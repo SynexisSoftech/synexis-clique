@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useRouter, useSearchParams } from "next/navigation"
-import { resetPasswordConfirm, resendForgotPasswordOtpRequest } from "../../../service/authApi" // Import the new resend function
+import { resetPasswordConfirm, resendForgotPasswordOtpRequest } from "../../../service/authApi"
 import {
   ArrowLeft,
   Shield,
@@ -19,8 +19,57 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  Check,
+  X,
 } from "lucide-react"
 import Link from "next/link"
+
+// Validation functions
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email.trim())
+}
+
+const validateOTP = (otp: string): boolean => {
+  return /^\d{6}$/.test(otp.trim())
+}
+
+const validatePassword = (password: string): {
+  isValid: boolean
+  strength: 'weak' | 'medium' | 'strong'
+  checks: {
+    length: boolean
+    uppercase: boolean
+    lowercase: boolean
+    number: boolean
+    special: boolean
+  }
+} => {
+  const checks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  }
+
+  const validChecks = Object.values(checks).filter(Boolean).length
+  let strength: 'weak' | 'medium' | 'strong' = 'weak'
+  
+  if (validChecks >= 4 && checks.length) {
+    strength = validChecks >= 5 ? 'strong' : 'medium'
+  }
+
+  return {
+    isValid: validChecks >= 4 && checks.length,
+    strength,
+    checks,
+  }
+}
+
+const validateConfirmPassword = (password: string, confirmPassword: string): boolean => {
+  return password === confirmPassword && password.length > 0
+}
 
 export default function ResetPasswordForm() {
   const [email, setEmail] = useState<string>("")
@@ -30,10 +79,15 @@ export default function ResetPasswordForm() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isResendingOtp, setIsResendingOtp] = useState(false) // New state for resend button
-  const [resendTimer, setResendTimer] = useState(0) // New state for resend countdown
+  const [isResendingOtp, setIsResendingOtp] = useState(false)
+  const [resendTimer, setResendTimer] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({})
+  const [passwordValidation, setPasswordValidation] = useState(validatePassword(""))
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,7 +95,7 @@ export default function ResetPasswordForm() {
   useEffect(() => {
     const emailParam = searchParams.get("email")
     if (emailParam) {
-      setEmail(decodeURIComponent(emailParam)) // Decode the email
+      setEmail(decodeURIComponent(emailParam))
     }
   }, [searchParams])
 
@@ -56,28 +110,108 @@ export default function ResetPasswordForm() {
     return () => clearTimeout(timerId)
   }, [resendTimer])
 
+  // Real-time validation
+  useEffect(() => {
+    const errors: Record<string, string> = {}
+
+    // Email validation
+    if (touchedFields.email && email && !validateEmail(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    // OTP validation
+    if (touchedFields.otp && otp && !validateOTP(otp)) {
+      errors.otp = "Please enter a valid 6-digit OTP"
+    }
+
+    // Password validation
+    if (touchedFields.newPassword && newPassword && !passwordValidation.isValid) {
+      errors.newPassword = "Password must meet all requirements"
+    }
+
+    // Confirm password validation
+    if (touchedFields.confirmPassword && confirmPassword && !validateConfirmPassword(newPassword, confirmPassword)) {
+      errors.confirmPassword = "Passwords do not match"
+    }
+
+    setValidationErrors(errors)
+  }, [email, otp, newPassword, confirmPassword, passwordValidation, touchedFields])
+
+  // Update password validation when password changes
+  useEffect(() => {
+    setPasswordValidation(validatePassword(newPassword))
+  }, [newPassword])
+
+  const handleFieldChange = (field: string, value: string) => {
+    setTouchedFields(prev => ({ ...prev, [field]: true }))
+    
+    switch (field) {
+      case 'email':
+        setEmail(value)
+        break
+      case 'otp':
+        setOtp(value.replace(/\D/g, '').slice(0, 6)) // Only allow digits, max 6
+        break
+      case 'newPassword':
+        setNewPassword(value)
+        break
+      case 'confirmPassword':
+        setConfirmPassword(value)
+        break
+    }
+    
+    // Clear error when user starts typing
+    setError(null)
+  }
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Required field validation
+    if (!email.trim()) {
+      errors.email = "Email is required"
+    } else if (!validateEmail(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    if (!otp.trim()) {
+      errors.otp = "OTP is required"
+    } else if (!validateOTP(otp)) {
+      errors.otp = "Please enter a valid 6-digit OTP"
+    }
+
+    if (!newPassword) {
+      errors.newPassword = "Password is required"
+    } else if (!passwordValidation.isValid) {
+      errors.newPassword = "Password must meet all requirements"
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password"
+    } else if (!validateConfirmPassword(newPassword, confirmPassword)) {
+      errors.confirmPassword = "Passwords do not match"
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      setError("Please fix the validation errors before submitting")
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
     setSuccessMessage(null)
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.")
-      setIsSubmitting(false)
-      return
-    }
-
-    if (!email || !otp || !newPassword) {
-      setError("All fields are required.")
-      setIsSubmitting(false)
-      return
-    }
-
     try {
       const resetData = {
-        email,
-        otp,
+        email: email.trim().toLowerCase(),
+        otp: otp.trim(),
         newPassword,
       }
       const response = await resetPasswordConfirm(resetData)
@@ -96,25 +230,49 @@ export default function ResetPasswordForm() {
   }
 
   const handleResendOtp = async () => {
-    if (!email) {
+    if (!email.trim()) {
       setError("Please provide your email to resend OTP.")
       return
     }
+    
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address.")
+      return
+    }
+
     setIsResendingOtp(true)
-    setResendTimer(60) // Start 60-second countdown
+    setResendTimer(60)
     setError(null)
     setSuccessMessage(null)
 
     try {
-      const response = await resendForgotPasswordOtpRequest(email)
+      const response = await resendForgotPasswordOtpRequest(email.trim().toLowerCase())
       setSuccessMessage(response.message || "A new OTP has been sent to your email.")
     } catch (err: any) {
       const errorMessage = err.message || "Failed to resend OTP. Please try again."
       setError(errorMessage)
       console.error("Resend OTP error:", err)
-      setResendTimer(0) // Reset timer on error
+      setResendTimer(0)
     } finally {
       setIsResendingOtp(false)
+    }
+  }
+
+  const getPasswordStrengthColor = () => {
+    switch (passwordValidation.strength) {
+      case 'strong': return 'text-green-600'
+      case 'medium': return 'text-yellow-600'
+      case 'weak': return 'text-red-600'
+      default: return 'text-gray-400'
+    }
+  }
+
+  const getPasswordStrengthText = () => {
+    switch (passwordValidation.strength) {
+      case 'strong': return 'Strong'
+      case 'medium': return 'Medium'
+      case 'weak': return 'Weak'
+      default: return 'Enter password'
     }
   }
 
@@ -185,12 +343,21 @@ export default function ResetPasswordForm() {
                   type="email"
                   placeholder="Enter your email address"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleFieldChange('email', e.target.value)}
+                  onBlur={() => setTouchedFields(prev => ({ ...prev, email: true }))}
                   required
                   disabled={!!searchParams.get("email") || isSubmitting}
-                  className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+                  className={`w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 ${
+                    validationErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-[#6F4E37]'
+                  }`}
                 />
               </div>
+              {validationErrors.email && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  {validationErrors.email}
+                </p>
+              )}
             </div>
 
             {/* OTP Field */}
@@ -207,13 +374,22 @@ export default function ResetPasswordForm() {
                   type="text"
                   placeholder="Enter 6-digit OTP"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => handleFieldChange('otp', e.target.value)}
+                  onBlur={() => setTouchedFields(prev => ({ ...prev, otp: true }))}
                   required
                   disabled={isSubmitting}
                   maxLength={6}
-                  className="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-center tracking-widest font-mono text-lg"
+                  className={`w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-2 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-center tracking-widest font-mono text-lg ${
+                    validationErrors.otp ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-[#6F4E37]'
+                  }`}
                 />
               </div>
+              {validationErrors.otp && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  {validationErrors.otp}
+                </p>
+              )}
             </div>
 
             {/* New Password Field */}
@@ -230,10 +406,13 @@ export default function ResetPasswordForm() {
                   type={showNewPassword ? "text" : "password"}
                   placeholder="Enter new password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => handleFieldChange('newPassword', e.target.value)}
+                  onBlur={() => setTouchedFields(prev => ({ ...prev, newPassword: true }))}
                   required
                   disabled={isSubmitting}
-                  className="w-full pl-12 pr-12 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full pl-12 pr-12 py-4 text-gray-900 bg-white border-2 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    validationErrors.newPassword ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-[#6F4E37]'
+                  }`}
                 />
                 <button
                   type="button"
@@ -244,6 +423,61 @@ export default function ResetPasswordForm() {
                   {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              
+              {/* Password Strength Indicator */}
+              {newPassword && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Password strength:</span>
+                    <span className={`text-xs font-medium ${getPasswordStrengthColor()}`}>
+                      {getPasswordStrengthText()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div 
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        passwordValidation.strength === 'strong' ? 'bg-green-500 w-full' :
+                        passwordValidation.strength === 'medium' ? 'bg-yellow-500 w-2/3' :
+                        passwordValidation.strength === 'weak' ? 'bg-red-500 w-1/3' : 'bg-gray-300 w-0'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Password Requirements */}
+              {touchedFields.newPassword && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs text-gray-600 font-medium">Password requirements:</p>
+                  <div className="space-y-1">
+                    {[
+                      { key: 'length', label: 'At least 8 characters', check: passwordValidation.checks.length },
+                      { key: 'uppercase', label: 'One uppercase letter', check: passwordValidation.checks.uppercase },
+                      { key: 'lowercase', label: 'One lowercase letter', check: passwordValidation.checks.lowercase },
+                      { key: 'number', label: 'One number', check: passwordValidation.checks.number },
+                      { key: 'special', label: 'One special character', check: passwordValidation.checks.special },
+                    ].map(({ key, label, check }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        {check ? (
+                          <Check className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <X className="h-3 w-3 text-red-500" />
+                        )}
+                        <span className={`text-xs ${check ? 'text-green-600' : 'text-red-600'}`}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {validationErrors.newPassword && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  {validationErrors.newPassword}
+                </p>
+              )}
             </div>
 
             {/* Confirm Password Field */}
@@ -260,10 +494,13 @@ export default function ResetPasswordForm() {
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm new password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+                  onBlur={() => setTouchedFields(prev => ({ ...prev, confirmPassword: true }))}
                   required
                   disabled={isSubmitting}
-                  className="w-full pl-12 pr-12 py-4 text-gray-900 bg-white border-2 border-gray-200 rounded-xl transition-all duration-300 focus:border-[#6F4E37] focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`w-full pl-12 pr-12 py-4 text-gray-900 bg-white border-2 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-[#6F4E37]/10 focus:outline-none placeholder:text-gray-400 group-hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    validationErrors.confirmPassword ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-[#6F4E37]'
+                  }`}
                 />
                 <button
                   type="button"
@@ -274,12 +511,36 @@ export default function ResetPasswordForm() {
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              
+              {/* Password Match Indicator */}
+              {confirmPassword && (
+                <div className="mt-2 flex items-center gap-2">
+                  {validateConfirmPassword(newPassword, confirmPassword) ? (
+                    <>
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span className="text-xs text-green-600">Passwords match</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-4 w-4 text-red-500" />
+                      <span className="text-xs text-red-600">Passwords do not match</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {validationErrors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  {validationErrors.confirmPassword}
+                </p>
+              )}
             </div>
 
             {/* Reset Password Button */}
             <Button
               type="submit"
-              disabled={isSubmitting || !email || !otp || !newPassword || !confirmPassword}
+              disabled={isSubmitting || Object.keys(validationErrors).length > 0 || !email || !otp || !newPassword || !confirmPassword}
               className="w-full relative overflow-hidden rounded-xl bg-gradient-to-r from-[#6F4E37] to-[#5d4230] px-6 py-4 text-white font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-[#6F4E37]/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <span className={`transition-opacity duration-200 ${isSubmitting ? "opacity-0" : "opacity-100"}`}>
@@ -300,9 +561,9 @@ export default function ResetPasswordForm() {
 
             {/* Resend OTP Button */}
             <Button
-              type="button" // Important: type="button" to prevent form submission
+              type="button"
               onClick={handleResendOtp}
-              disabled={isResendingOtp || resendTimer > 0 || !email}
+              disabled={isResendingOtp || resendTimer > 0 || !email || !validateEmail(email)}
               className="w-full relative overflow-hidden rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-4 font-semibold shadow-sm transition-all duration-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
             >
               <span className={`transition-opacity duration-200 ${isResendingOtp ? "opacity-0" : "opacity-100"}`}>

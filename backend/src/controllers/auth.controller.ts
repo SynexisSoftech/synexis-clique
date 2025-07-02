@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto'; // Used for generating alphanumeric OTPs for password reset
+import jwt from 'jsonwebtoken';
 import UserModel, { IUser } from '../models/user.model'; // Assuming IUser has photoURL and role
 import { OtpPurpose } from '../models/OtpVerification';
+import BlacklistedToken from '../models/blacklistedToken.model';
 import * as OtpService from '../services/otp.service';
 import * as TokenService from '../services/token.service'; // Assumes TokenService generates accessToken and refreshToken
 import { uploadImageToCloudinary } from '../services/cloudinary.service'; // For handling image uploads
 import { AuthRequest } from '../middleware/auth.middleware';
+import { AuditService } from '../services/audit.service';
 
 // --- Configuration Constants ---
 // Number of salt rounds for hashing user passwords. Higher is more secure, but slower.
@@ -254,16 +257,21 @@ export const resendSignupOtp = async (req: Request, res: Response): Promise<void
 /**
  * Handles user login. It verifies email, password, and account verification status.
  * On successful login, it generates and sets authentication tokens.
+ * Implements account lockout after failed attempts.
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body; // Destructure email and password from request body.
+  const { email, password } = req.body;
+
+  // Account lockout configuration
+  const MAX_LOGIN_ATTEMPTS = 5;
+  const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 
   try {
     // 1. Find the user by email.
     const user = await UserModel.findOne({ email });
     if (!user) {
-      // Use a generic message to prevent email enumeration.
       console.warn(`[Login] Login attempt with non-existent email: ${email}`);
+      await AuditService.logFailedLogin(req, email, 'User not found');
       res.status(401).json({ message: 'Invalid email or password.' });
       return;
     }
@@ -271,32 +279,74 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // 2. Check if the user's account is verified.
     if (!user.isVerified) {
       console.warn(`[Login] Login attempt for unverified account: ${email}`);
+      await AuditService.logFailedLogin(req, email, 'Account not verified');
       res.status(403).json({ message: 'Account not verified. Please check your email for OTP or resend OTP.' });
       return;
     }
-     if (user.isBlocked) {
+
+    // 3. Check if the user's account is blocked.
+    if (user.isBlocked) {
       console.warn(`[Login] Login attempt for blocked account: ${email}`);
+      await AuditService.logFailedLogin(req, email, 'Account blocked');
       res.status(403).json({ message: 'Sorry, your account is blocked at the moment. Please contact support for assistance.' });
       return;
     }
 
-    // 3. Compare the provided password with the hashed password stored in the database.
+    // 4. Check if account is locked due to too many failed attempts
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remainingTime = Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000 / 60);
+      console.warn(`[Login] Login attempt for locked account: ${email}, remaining lock time: ${remainingTime} minutes`);
+      await AuditService.logFailedLogin(req, email, 'Account locked');
+      res.status(423).json({ 
+        message: `Account temporarily locked due to too many failed attempts. Try again in ${remainingTime} minutes.`,
+        lockRemaining: remainingTime
+      });
+      return;
+    }
+
+    // 5. Compare the provided password with the hashed password stored in the database.
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-      // Use a generic message to prevent password guessing attacks.
-      console.warn(`[Login] Login attempt with incorrect password for email: ${email}`);
+      // Increment login attempts
+      user.loginAttempts += 1;
+      
+      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        // Lock the account
+        user.lockUntil = new Date(Date.now() + LOCKOUT_DURATION);
+        await user.save();
+        
+        console.warn(`[Login] Account locked due to too many failed attempts: ${email}`);
+        await AuditService.logAccountLocked(req, email, 'Too many failed attempts');
+        res.status(423).json({ 
+          message: `Account locked for ${LOCKOUT_DURATION / 1000 / 60} minutes due to too many failed attempts.`,
+          lockRemaining: LOCKOUT_DURATION / 1000 / 60
+        });
+        return;
+      }
+      
+      await user.save();
+      console.warn(`[Login] Failed login attempt ${user.loginAttempts}/${MAX_LOGIN_ATTEMPTS} for email: ${email}`);
+      await AuditService.logFailedLogin(req, email, 'Invalid password');
       res.status(401).json({ message: 'Invalid email or password.' });
       return;
     }
+
+    // 6. Successful login - reset login attempts and lock
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
     console.log(`[Login] User ${user.email} authenticated successfully.`);
 
-    // 4. Generate Access and Refresh Tokens.
+    // Log successful login
+    await AuditService.logSuccessfulLogin(req, user._id.toString(), user.email);
+
+    // 7. Generate Access and Refresh Tokens.
     const { accessToken, refreshToken } = TokenService.generateTokens(user._id.toString());
     console.log(`[Login] Generated Access Token: ${accessToken.substring(0, 20)}...`);
     console.log(`[Login] Generated Refresh Token: ${refreshToken.substring(0, 20)}...`);
 
-
-    // 5. Set the Refresh Token as an HttpOnly cookie.
+    // 8. Set the Refresh Token as an HttpOnly cookie.
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -304,8 +354,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    // 6. Respond to the client with success message, access token, and user details.
-    // Include user's role and photoURL for immediate client-side display.
+    // 9. Respond to the client with success message, access token, and user details.
     res.status(200).json({
       message: 'Login successful',
       accessToken,
@@ -315,13 +364,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role, // Include user's role
+        role: user.role,
         isBlocked: user.isBlocked,
-        photoURL: user.photoURL // Include user's profile picture URL
+        photoURL: user.photoURL
       }
     });
   } catch (err: any) {
-    // Catch any unexpected errors during the login process.
     console.error('Login Error:', err);
     res.status(500).json({ message: `Login failed: ${err.message || 'An unexpected error occurred. Please try again.'}` });
   }
@@ -558,9 +606,18 @@ export const refreshTokenHandler = async (req: Request, res: Response): Promise<
       res.status(403).json({ message: 'Your account is blocked. Please log in again or contact support.' });
       return;
     }
-        // Generate new pair of tokens
-        const { accessToken, refreshToken: newRefreshToken } = TokenService.generateTokens(user._id.toString());
+        // Generate new pair of tokens (rotation)
+        const { accessToken, refreshToken: newRefreshToken } = TokenService.rotateRefreshToken(user._id.toString());
         console.log(`[Refresh Token] New access token generated for user: ${user.email}`);
+
+        // Blacklist old refresh token
+        console.log(`[Refresh Token] Blacklisting old refresh token for user: ${user.email}`);
+        await BlacklistedToken.blacklistToken(
+            incomingRefreshToken,
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            user._id.toString(),
+            'token_rotation'
+        );
 
         // Set the new refresh token in HttpOnly cookie
         res.cookie('refreshToken', newRefreshToken, {
@@ -587,10 +644,37 @@ export const refreshTokenHandler = async (req: Request, res: Response): Promise<
 
 // --- Logout Controller ---
 /**
- * Handles user logout by clearing the refresh token cookie.
+ * Handles user logout by blacklisting the access token and clearing the refresh token cookie.
  */
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (token) {
+      try {
+        // Decode token to get expiry and userId
+        const decoded = jwt.decode(token) as any;
+        if (decoded && decoded.exp) {
+          const expiresAt = new Date(decoded.exp * 1000);
+          
+          // Add token to blacklist
+          await BlacklistedToken.blacklistToken(
+            token, 
+            expiresAt, 
+            decoded.userId, 
+            'logout'
+          );
+          
+          console.log(`[Logout] Token blacklisted for user: ${decoded.userId}`);
+          
+          // Log token blacklisting
+          await AuditService.logTokenBlacklisted(req, decoded.userId, 'logout');
+        }
+      } catch (decodeError) {
+        console.warn('[Logout] Could not decode token for blacklisting:', decodeError);
+      }
+    }
+
     // Clear the refresh token cookie
     res.cookie('refreshToken', '', {
       httpOnly: true,
@@ -600,6 +684,20 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     });
 
     console.log('[Logout] User logged out successfully');
+    
+    // Log logout (if we have user info)
+    const logoutToken = req.headers.authorization?.split(' ')[1];
+    if (logoutToken) {
+      try {
+        const decoded = jwt.decode(logoutToken) as any;
+        if (decoded?.userId) {
+          await AuditService.logLogout(req, decoded.userId);
+        }
+      } catch (error) {
+        console.warn('[Logout] Could not decode token for audit logging');
+      }
+    }
+    
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (err: any) {
     console.error('Logout Error:', err);

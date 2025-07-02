@@ -18,6 +18,7 @@ import {
   Phone,
   Share2,
   Truck,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -149,6 +150,12 @@ const data = {
       title: "Shipping Management",
       url: "/admin/shipping",
       icon: Truck,
+      isActive: false,
+    },
+    {
+      title: "Audit Logs",
+      url: "/admin/audit-logs",
+      icon: Shield,
       isActive: false,
     },
     // {

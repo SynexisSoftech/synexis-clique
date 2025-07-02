@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes'; // ✅ Import auth routes
 import { setupSwagger } from '../swagger'; // ✅ Import Swagger setup
 import cors from 'cors';
 import helmet from 'helmet'; // Add helmet for security headers
+import { logESewaConfigStatus } from './config/esewa.config';
 
  // Add this line to import category routes
 import adminRouter from './routes/admin/admin.routes';
@@ -29,6 +30,7 @@ import adminShippingRoutes from './routes/admin/shipping.routes';
 import publicShippingRoutes from './routes/public/shipping.routes';
 import adminContactRoutes from './routes/admin/adminContact.routes';
 import publicContactRoutes from './routes/public/publicContact.routes';
+import auditRoutes from './routes/admin/audit.routes';
 import cookieParser from 'cookie-parser';
 dotenv.config();
 
@@ -47,8 +49,8 @@ const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:2701
 const corsOptions = {
   origin: 'http://localhost:3000', // <-- IMPORTANT: Change to your Next.js URL
   credentials: true, // <-- IMPORTANT: Allow sending cookies (for refreshToken)
-   methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Allowed HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-ID'],
   optionsSuccessStatus: 200
 };
 
@@ -58,9 +60,9 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:3000"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -68,7 +70,19 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+// Additional security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 app.use(cors(corsOptions))
 app.use(express.json({ limit: '50mb' }));
@@ -88,6 +102,7 @@ app.use('/api/admin/contact-info', contactInfoAdminRoutes);
 app.use('/api/contact-info', publicContactInfoRoutes);
 app.use('/api/admin/contact-us', adminContactRoutes);
 app.use('/api/contact-us', publicContactRoutes);
+app.use('/api/admin/audit-logs', auditRoutes);
 
 // For Public data fetching (e.g., /api/hero-slides)
 app.use('/api/hero-slides', publicHeroRoutes);
@@ -128,6 +143,9 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT} , clique backend working`);
       console.log(`📘 Swagger UI available at http://localhost:${PORT}/api-docs`);
+      
+      // Log eSewa configuration status
+      logESewaConfigStatus();
     });
   } catch (error) {
     console.error('❌ Error connecting to MongoDB or starting server:', error);

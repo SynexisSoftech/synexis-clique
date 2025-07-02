@@ -3,6 +3,11 @@ import { AuthRequest } from '../../middleware/auth.middleware'; // Adjust path
 import { Order } from '../../models/order.model'; // Adjust path
 import mongoose from 'mongoose';
 
+// Audit logging function
+const logAuditEvent = (event: string, adminId: string, orderId: string, details: any) => {
+  console.log(`[ADMIN_AUDIT] ${new Date().toISOString()} - ${event} - Admin: ${adminId} - Order: ${orderId} - Details:`, details);
+};
+
 /**
  * @desc    Get all orders (admin view)
  * @route   GET /api/admin/orders
@@ -10,8 +15,14 @@ import mongoose from 'mongoose';
  */
 export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const pageSize = Number(req.query.limit) || 10;
-    const page = Number(req.query.page) || 1;
+    // Security check
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      return;
+    }
+
+    const pageSize = Math.min(Number(req.query.limit) || 10, 100); // Limit max page size
+    const page = Math.max(Number(req.query.page) || 1, 1);
     const { status, search } = req.query; // Filter by status or search
 
     const query: any = {};
@@ -42,6 +53,14 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
       .skip(pageSize * (page - 1))
       .sort({ createdAt: -1 });
 
+    // Log audit event
+    logAuditEvent('ORDERS_VIEWED', req.user._id.toString(), 'ALL', {
+      page,
+      pageSize,
+      filters: { status, search },
+      resultCount: orders.length
+    });
+
     res.json({
       orders,
       page,
@@ -61,6 +80,12 @@ export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFu
  */
 export const getOrderById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Security check
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      return;
+    }
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       res.status(400).json({ message: 'Invalid order ID format' });
       return;
@@ -75,6 +100,12 @@ export const getOrderById = async (req: AuthRequest, res: Response, next: NextFu
       });
 
     if (order) {
+      // Log audit event
+      logAuditEvent('ORDER_VIEWED', req.user._id.toString(), order._id.toString(), {
+        orderId: order._id,
+        status: order.status
+      });
+
       res.json(order);
     } else {
       res.status(404).json({ message: 'Order not found' });
@@ -91,38 +122,64 @@ export const getOrderById = async (req: AuthRequest, res: Response, next: NextFu
  * @access  Private/Admin
  */
 export const updateOrderStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    // Security check
+    if (!req.user || req.user.role !== 'admin') {
+      await session.abortTransaction();
+      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      return;
+    }
+
     const { status } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        res.status(400).json({ message: 'Invalid order ID format' });
-        return;
+      await session.abortTransaction();
+      res.status(400).json({ message: 'Invalid order ID format' });
+      return;
     }
 
     if (!status || !['PENDING', 'COMPLETED', 'DELIVERED', 'FAILED'].includes(status.toUpperCase())) {
-        res.status(400).json({ message: 'Invalid status provided. Must be one of: PENDING, COMPLETED, DELIVERED, FAILED.' });
-        return;
+      await session.abortTransaction();
+      res.status(400).json({ message: 'Invalid status provided. Must be one of: PENDING, COMPLETED, DELIVERED, FAILED.' });
+      return;
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).session(session);
 
     if (!order) {
-        res.status(404).json({ message: 'Order not found' });
-        return;
+      await session.abortTransaction();
+      res.status(404).json({ message: 'Order not found' });
+      return;
     }
 
+    const oldStatus = order.status;
     order.status = status.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DELIVERED' | 'FAILED';
-    const updatedOrder = await order.save();
+    const updatedOrder = await order.save({ session });
 
+    // Log audit event
+    logAuditEvent('ORDER_STATUS_UPDATED', req.user._id.toString(), order._id.toString(), {
+      orderId: order._id,
+      oldStatus,
+      newStatus: status.toUpperCase(),
+      adminId: req.user._id
+    });
+
+    await session.commitTransaction();
     res.json(updatedOrder);
 
   } catch (error: any) {
+    await session.abortTransaction();
     console.error('[Admin Order Controller] Update Order Status Error:', error.message);
     if (error.name === 'ValidationError') {
-        res.status(400).json({ message: 'Validation Error', errors: error.errors });
+      res.status(400).json({ message: 'Validation Error', errors: error.errors });
     } else {
-        res.status(500).json({ message: 'Server error while updating order status' });
+      res.status(500).json({ message: 'Server error while updating order status' });
     }
+  } finally {
+    session.endSession();
   }
 };
 
@@ -132,37 +189,64 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response, next: N
  * @access  Private/Admin
  */
 export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    // Security check
+    if (!req.user || req.user.role !== 'admin') {
+      await session.abortTransaction();
+      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      return;
+    }
+
     const { deliveryStatus } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      await session.abortTransaction();
       res.status(400).json({ message: 'Invalid order ID format' });
       return;
     }
 
     if (!deliveryStatus || !['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].includes(deliveryStatus.toUpperCase())) {
+      await session.abortTransaction();
       res.status(400).json({ message: 'Invalid delivery status provided. Must be one of: PENDING, SHIPPED, DELIVERED, CANCELLED.' });
       return;
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).session(session);
 
     if (!order) {
+      await session.abortTransaction();
       res.status(404).json({ message: 'Order not found' });
       return;
     }
 
+    const oldDeliveryStatus = order.deliveryStatus;
     order.deliveryStatus = deliveryStatus.toUpperCase() as 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-    const updatedOrder = await order.save();
+    const updatedOrder = await order.save({ session });
 
+    // Log audit event
+    logAuditEvent('ORDER_DELIVERY_STATUS_UPDATED', req.user._id.toString(), order._id.toString(), {
+      orderId: order._id,
+      oldDeliveryStatus,
+      newDeliveryStatus: deliveryStatus.toUpperCase(),
+      adminId: req.user._id
+    });
+
+    await session.commitTransaction();
     res.json(updatedOrder);
+
   } catch (error: any) {
+    await session.abortTransaction();
     console.error('[Admin Order Controller] Update Order Delivery Status Error:', error.message);
     if (error.name === 'ValidationError') {
       res.status(400).json({ message: 'Validation Error', errors: error.errors });
     } else {
       res.status(500).json({ message: 'Server error while updating order delivery status' });
     }
+  } finally {
+    session.endSession();
   }
 };
 
@@ -173,13 +257,19 @@ export const updateOrderDeliveryStatus = async (req: AuthRequest, res: Response,
  */
 export const getOrdersByProductId = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Security check
+    if (!req.user || req.user.role !== 'admin') {
+      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      return;
+    }
+
     if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
       res.status(400).json({ message: 'Invalid product ID format' });
       return;
     }
 
-    const pageSize = Number(req.query.limit) || 10;
-    const page = Number(req.query.page) || 1;
+    const pageSize = Math.min(Number(req.query.limit) || 10, 100);
+    const page = Math.max(Number(req.query.page) || 1, 1);
 
     // Find orders that contain the specified product in their items array
     const query = {
@@ -196,6 +286,14 @@ export const getOrdersByProductId = async (req: AuthRequest, res: Response, next
       .limit(pageSize)
       .skip(pageSize * (page - 1))
       .sort({ createdAt: -1 });
+
+    // Log audit event
+    logAuditEvent('PRODUCT_ORDERS_VIEWED', req.user._id.toString(), req.params.productId, {
+      productId: req.params.productId,
+      page,
+      pageSize,
+      resultCount: orders.length
+    });
 
     res.json({
       orders,

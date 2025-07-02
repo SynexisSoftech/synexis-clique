@@ -23,6 +23,13 @@ import { useAuth } from "../../context/AuthContext"
 import { orderService } from "../../../service/public/orderService"
 import { shippingService, type IProvince } from "../../../service/shippingService"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  submitSecureESewaPayment, 
+  validatePaymentAmount, 
+  paymentRateLimiter, 
+  logPaymentSecurityEvent,
+  generateCSRFToken 
+} from "../../../utils/paymentSecurity"
 
 interface ShippingInfo {
   firstName: string
@@ -56,24 +63,32 @@ const formatPrice = (price: number): string => {
   }).format(price)
 }
 
-// Helper function to submit eSewa payment form
+// Enhanced eSewa payment submission with security
 const submitESewaPayment = (formAction: string, fields: Record<string, any>) => {
-  const form = document.createElement("form")
-  form.method = "POST"
-  form.action = formAction
-  form.style.display = "none"
+  // Generate CSRF token for additional security
+  const csrfToken = generateCSRFToken();
+  
+  // Use secure payment submission
+  submitSecureESewaPayment(formAction, fields, csrfToken);
+}
 
-  Object.entries(fields).forEach(([key, value]) => {
-    const input = document.createElement("input")
-    input.type = "hidden"
-    input.name = key
-    input.value = value.toString()
-    form.appendChild(input)
-  })
+// Validation functions
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
-  document.body.appendChild(form)
-  form.submit()
-  document.body.removeChild(form)
+const validatePhone = (phone: string): boolean => {
+  const phoneRegex = /^[+]?[0-9\s\-\(\)]{10,15}$/
+  return phoneRegex.test(phone)
+}
+
+const validateName = (name: string): boolean => {
+  return name.trim().length >= 2 && /^[a-zA-Z\s]+$/.test(name.trim())
+}
+
+const validateAddress = (address: string): boolean => {
+  return address.trim().length >= 3
 }
 
 export default function CheckoutPage() {
@@ -114,6 +129,7 @@ export default function CheckoutPage() {
     sameAsShipping: true,
   })
   const [isLoadingShipping, setIsLoadingShipping] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   // Handle client-side mounting
   useEffect(() => {
@@ -123,11 +139,6 @@ export default function CheckoutPage() {
   // Update form with user data when user loads
   useEffect(() => {
     if (user) {
-      // Create full name from firstName and lastName, fallback to username if names not available
-      const fullName = user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
-        : user.username || user.email || ""
-      
       setShippingInfo((prev) => ({
         ...prev,
         firstName: user.firstName || prev.firstName,
@@ -194,6 +205,7 @@ export default function CheckoutPage() {
         setAvailableCities(province.cities)
         setSelectedCity("")
         setShippingCharge(0)
+        setShippingInfo(prev => ({ ...prev, province: selectedProvince, city: "" }))
       }
     } else {
       setAvailableCities([])
@@ -272,6 +284,9 @@ export default function CheckoutPage() {
   const handleShippingChange = (field: keyof ShippingInfo, value: string) => {
     setShippingInfo((prev) => ({ ...prev, [field]: value }))
 
+    // Clear validation error for this field
+    setValidationErrors(prev => ({ ...prev, [field]: "" }))
+
     // Auto-update billing if same as shipping
     if (billingInfo.sameAsShipping && field !== "country") {
       setBillingInfo((prev) => ({ ...prev, [field]: value }))
@@ -280,6 +295,9 @@ export default function CheckoutPage() {
 
   const handleBillingChange = (field: keyof Omit<BillingInfo, "sameAsShipping">, value: string) => {
     setBillingInfo((prev) => ({ ...prev, [field]: value }))
+    
+    // Clear validation error for this field
+    setValidationErrors(prev => ({ ...prev, [`billing_${field}`]: "" }))
   }
 
   const handleSameAsShippingChange = (checked: boolean) => {
@@ -288,100 +306,140 @@ export default function CheckoutPage() {
       sameAsShipping: checked,
       ...(checked ? { ...shippingInfo } : {}),
     }))
+    
+    // Clear billing validation errors when same as shipping
+    if (checked) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev }
+        Object.keys(newErrors).forEach(key => {
+          if (key.startsWith('billing_')) {
+            delete newErrors[key]
+          }
+        })
+        return newErrors
+      })
+    }
   }
 
   const validateForm = (): boolean => {
-    const requiredFields = ["firstName", "lastName", "email", "phone", "address", "province", "city"]
+    const errors: Record<string, string> = {}
 
-    for (const field of requiredFields) {
-      if (!shippingInfo[field as keyof ShippingInfo]) {
-        toast({
-          title: "Missing Information",
-          description: `Please fill in your ${field.replace(/([A-Z])/g, " $1").toLowerCase()}`,
-          variant: "destructive",
-        })
-        return false
-      }
+    // Validate shipping information
+    if (!validateName(shippingInfo.firstName)) {
+      errors.firstName = "First name must be at least 2 characters and contain only letters"
+    }
+    if (!validateName(shippingInfo.lastName)) {
+      errors.lastName = "Last name must be at least 2 characters and contain only letters"
+    }
+    if (!validateEmail(shippingInfo.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    if (!validatePhone(shippingInfo.phone)) {
+      errors.phone = "Please enter a valid phone number"
+    }
+    if (!validateAddress(shippingInfo.address)) {
+      errors.address = "Address must be at least 3 characters long"
+    }
+    if (!shippingInfo.province) {
+      errors.province = "Please select a province"
+    }
+    if (!shippingInfo.city) {
+      errors.city = "Please select a city"
     }
 
+    // Validate billing information if different from shipping
     if (!billingInfo.sameAsShipping) {
-      for (const field of requiredFields) {
-        if (!billingInfo[field as keyof BillingInfo]) {
-          toast({
-            title: "Missing Billing Information",
-            description: `Please fill in billing ${field.replace(/([A-Z])/g, " $1").toLowerCase()}`,
-            variant: "destructive",
-          })
-          return false
-        }
+      if (!validateName(billingInfo.firstName)) {
+        errors.billing_firstName = "First name must be at least 2 characters and contain only letters"
+      }
+      if (!validateName(billingInfo.lastName)) {
+        errors.billing_lastName = "Last name must be at least 2 characters and contain only letters"
+      }
+      if (!validateEmail(billingInfo.email)) {
+        errors.billing_email = "Please enter a valid email address"
+      }
+      if (!validatePhone(billingInfo.phone)) {
+        errors.billing_phone = "Please enter a valid phone number"
+      }
+      if (!validateAddress(billingInfo.address)) {
+        errors.billing_address = "Address must be at least 3 characters long"
+      }
+      if (!billingInfo.city) {
+        errors.billing_city = "Please enter a city"
       }
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(shippingInfo.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      })
-      return false
-    }
-
-    // Phone validation
-    const phoneRegex = /^[0-9]{10}$/
-    if (!phoneRegex.test(shippingInfo.phone.replace(/\D/g, ""))) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid 10-digit phone number",
-        variant: "destructive",
-      })
-      return false
-    }
-
-    return true
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handlePlaceOrder = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form before proceeding",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!cart || !cart.items || cart.items.length === 0) {
       toast({
         title: "Your cart is empty",
         description: "Please add items to your cart before checking out.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
-    setIsProcessing(true);
+    // Payment rate limiting check
+    if (user?.id) {
+      const rateLimitCheck = paymentRateLimiter.canAttemptPayment(user.id);
+      if (!rateLimitCheck.allowed) {
+        const resetTime = new Date(rateLimitCheck.resetTime!).toLocaleTimeString();
+        toast({
+          title: "Too Many Payment Attempts",
+          description: `Please wait until ${resetTime} before trying again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Log payment attempt
+    logPaymentSecurityEvent('payment_attempt_started', {
+      userId: user?.id,
+      cartItemCount: cart.items.length,
+      totalAmount: cart.items.reduce((sum, item) => sum + (item.productId.discountPrice || item.productId.originalPrice) * item.quantity, 0)
+    });
+
+    setIsProcessing(true)
 
     try {
-      // Prepare the data for the refactored backend
+      // Prepare the data for the backend
       const orderData = {
         items: cart.items.map(item => ({
           productId: item.productId._id,
           quantity: item.quantity,
         })),
         shippingInfo: {
-          firstName: shippingInfo.firstName,
-          lastName: shippingInfo.lastName,
-          email: shippingInfo.email,
-          phone: shippingInfo.phone,
-          address: shippingInfo.address,
+          firstName: shippingInfo.firstName.trim(),
+          lastName: shippingInfo.lastName.trim(),
+          email: shippingInfo.email.trim().toLowerCase(),
+          phone: shippingInfo.phone.trim(),
+          address: shippingInfo.address.trim(),
           province: shippingInfo.province,
           city: shippingInfo.city,
-          postalCode: shippingInfo.postalCode,
-          country: shippingInfo.country,
+          postalCode: shippingInfo.postalCode.trim(),
+          country: shippingInfo.country.trim(),
         },
-      };
+      }
 
-      console.log("Sending order data to backend:", orderData);
+      console.log("Sending order data to backend:", orderData)
 
-      // No need to pass totalAmount from here anymore.
-      // The service will need a slight adjustment.
-      const orderResponse = await orderService.createOrder(orderData);
+      const orderResponse = await orderService.createOrder(orderData)
 
-      console.log("Order created successfully:", orderResponse);
+      console.log("Order created successfully:", orderResponse)
 
       // Store necessary info for the success page
       localStorage.setItem(
@@ -392,23 +450,24 @@ export default function CheckoutPage() {
           totalAmount: orderResponse.fields.total_amount,
           shippingInfo,
         }),
-      );
+      )
 
       // Redirect to eSewa for payment
-      submitESewaPayment(orderResponse.formAction, orderResponse.fields);
+      submitESewaPayment(orderResponse.formAction, orderResponse.fields)
 
     } catch (error: any) {
-      console.error("Order creation failed:", error);
-      const errorMessage = error.response?.data?.message || "Failed to create order. Please try again.";
+      console.error("Order creation failed:", error)
+      const errorMessage = error.message || "Failed to create order. Please try again."
       toast({
         title: "Order Failed",
         description: errorMessage,
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  };
+  }
+
   return (
     <>
       <Navbar />
@@ -445,7 +504,11 @@ export default function CheckoutPage() {
                       value={shippingInfo.firstName}
                       onChange={(e) => handleShippingChange("firstName", e.target.value)}
                       placeholder="Enter your first name"
+                      className={validationErrors.firstName ? "border-red-500" : ""}
                     />
+                    {validationErrors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="lastName">Last Name *</Label>
@@ -454,7 +517,11 @@ export default function CheckoutPage() {
                       value={shippingInfo.lastName}
                       onChange={(e) => handleShippingChange("lastName", e.target.value)}
                       placeholder="Enter your last name"
+                      className={validationErrors.lastName ? "border-red-500" : ""}
                     />
+                    {validationErrors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="email">Email *</Label>
@@ -464,7 +531,11 @@ export default function CheckoutPage() {
                       value={shippingInfo.email}
                       onChange={(e) => handleShippingChange("email", e.target.value)}
                       placeholder="Enter your email"
+                      className={validationErrors.email ? "border-red-500" : ""}
                     />
+                    {validationErrors.email && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number *</Label>
@@ -473,7 +544,11 @@ export default function CheckoutPage() {
                       value={shippingInfo.phone}
                       onChange={(e) => handleShippingChange("phone", e.target.value)}
                       placeholder="Enter your phone number"
+                      className={validationErrors.phone ? "border-red-500" : ""}
                     />
+                    {validationErrors.phone && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -483,13 +558,17 @@ export default function CheckoutPage() {
                     value={shippingInfo.address}
                     onChange={(e) => handleShippingChange("address", e.target.value)}
                     placeholder="Enter your full address"
+                    className={validationErrors.address ? "border-red-500" : ""}
                   />
+                  {validationErrors.address && (
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="province">Province *</Label>
                     <Select value={selectedProvince} onValueChange={setSelectedProvince}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className={`w-full ${validationErrors.province ? "border-red-500" : ""}`}>
                         <SelectValue placeholder="Select province" />
                       </SelectTrigger>
                       <SelectContent>
@@ -500,6 +579,9 @@ export default function CheckoutPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {validationErrors.province && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.province}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="city">City *</Label>
@@ -511,7 +593,7 @@ export default function CheckoutPage() {
                       }}
                       disabled={!selectedProvince || availableCities.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className={`w-full ${validationErrors.city ? "border-red-500" : ""}`}>
                         <SelectValue placeholder={selectedProvince ? "Select city" : "Select province first"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -522,6 +604,9 @@ export default function CheckoutPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {validationErrors.city && (
+                      <p className="text-red-500 text-xs mt-1">{validationErrors.city}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="postalCode">Postal Code</Label>
@@ -570,7 +655,11 @@ export default function CheckoutPage() {
                           value={billingInfo.firstName}
                           onChange={(e) => handleBillingChange("firstName", e.target.value)}
                           placeholder="Enter first name"
+                          className={validationErrors.billing_firstName ? "border-red-500" : ""}
                         />
+                        {validationErrors.billing_firstName && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.billing_firstName}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="billingLastName">Last Name *</Label>
@@ -579,7 +668,11 @@ export default function CheckoutPage() {
                           value={billingInfo.lastName}
                           onChange={(e) => handleBillingChange("lastName", e.target.value)}
                           placeholder="Enter last name"
+                          className={validationErrors.billing_lastName ? "border-red-500" : ""}
                         />
+                        {validationErrors.billing_lastName && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.billing_lastName}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="billingEmail">Email *</Label>
@@ -589,7 +682,11 @@ export default function CheckoutPage() {
                           value={billingInfo.email}
                           onChange={(e) => handleBillingChange("email", e.target.value)}
                           placeholder="Enter email"
+                          className={validationErrors.billing_email ? "border-red-500" : ""}
                         />
+                        {validationErrors.billing_email && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.billing_email}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="billingPhone">Phone Number *</Label>
@@ -598,7 +695,11 @@ export default function CheckoutPage() {
                           value={billingInfo.phone}
                           onChange={(e) => handleBillingChange("phone", e.target.value)}
                           placeholder="Enter phone number"
+                          className={validationErrors.billing_phone ? "border-red-500" : ""}
                         />
+                        {validationErrors.billing_phone && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.billing_phone}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="billingCountry">Country</Label>
@@ -617,7 +718,11 @@ export default function CheckoutPage() {
                         value={billingInfo.address}
                         onChange={(e) => handleBillingChange("address", e.target.value)}
                         placeholder="Enter full address"
+                        className={validationErrors.billing_address ? "border-red-500" : ""}
                       />
+                      {validationErrors.billing_address && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.billing_address}</p>
+                      )}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -627,7 +732,11 @@ export default function CheckoutPage() {
                           value={billingInfo.city}
                           onChange={(e) => handleBillingChange("city", e.target.value)}
                           placeholder="Enter city"
+                          className={validationErrors.billing_city ? "border-red-500" : ""}
                         />
+                        {validationErrors.billing_city && (
+                          <p className="text-red-500 text-xs mt-1">{validationErrors.billing_city}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="billingPostalCode">Postal Code</Label>
@@ -741,7 +850,7 @@ export default function CheckoutPage() {
                 {/* Place Order Button */}
                 <Button
                   onClick={handlePlaceOrder}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !selectedCity}
                   className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium"
                   size="lg"
                 >
@@ -757,6 +866,12 @@ export default function CheckoutPage() {
                     </>
                   )}
                 </Button>
+
+                {!selectedCity && (
+                  <p className="text-xs text-amber-600 text-center">
+                    Please select a city to calculate shipping and place your order.
+                  </p>
+                )}
 
                 <p className="text-xs text-slate-500 text-center">
                   By placing your order, you agree to our Terms of Service and Privacy Policy.

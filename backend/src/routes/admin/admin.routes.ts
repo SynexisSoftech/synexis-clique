@@ -1,7 +1,8 @@
 import express from 'express';
-import { protect, authorize } from '../../middleware/auth.middleware'; // Adjust path
-import { UserRole } from '../../models/user.model'; // Adjust path
-import { adminActionLimiter, adminCriticalActionLimiter } from '../../middleware/rateLimiter'; // Add rate limiting
+import { protect } from '../../middleware/auth.middleware';
+import { requireAdmin } from '../../middleware/admin.middleware';
+import { adminActionLimiter, adminCriticalActionLimiter } from '../../middleware/rateLimiter';
+import { csrfProtection } from '../../middleware/csrf.middleware';
 
 // Import admin controllers
 import * as adminCategoryController from '../../controllers/admin/category.controller'; // Adjust path
@@ -14,8 +15,9 @@ const router = express.Router();
 
 // Middleware for all admin routes: must be logged in and must be an ADMIN
 router.use(protect); // Ensures user is logged in
-router.use(authorize([UserRole.ADMIN])); // Ensures user is an admin
+router.use(requireAdmin); // Ensures user is an admin
 router.use(adminActionLimiter); // Apply admin rate limiting to all admin routes
+router.use(csrfProtection); // Apply CSRF protection to all admin routes
 
 // Category Routes
 router.route('/categories')

@@ -18,6 +18,12 @@ export const generateTokens = (userId: string): { accessToken: string; refreshTo
   return { accessToken, refreshToken };
 };
 
+export const rotateRefreshToken = (userId: string): { accessToken: string; refreshToken: string } => {
+  const accessToken = jwt.sign({ userId }, ACCESS_TOKEN_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const refreshToken = jwt.sign({ userId }, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  return { accessToken, refreshToken };
+};
+
 export const verifyRefreshToken = (token: string): { userId: string } | null => {
     try {
         const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as { userId: string };

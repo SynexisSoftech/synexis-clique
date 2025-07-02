@@ -15,6 +15,7 @@ import Navbar from "../components/navbar/navbar"
 import Footer from "../components/footer/footer"
 import { useToast } from "@/hooks/use-toast"
 import { orderService } from "@/service/public/orderService"
+import { validateESewaResponse, logPaymentSecurityEvent } from "@/utils/paymentSecurity"
 
 interface PaymentData {
   transaction_code: string
@@ -76,6 +77,19 @@ function SuccessPageContent() {
         const decodedData = atob(encodedData)
         const paymentResponse: PaymentData = JSON.parse(decodedData)
         setPaymentData(paymentResponse)
+
+        // Enhanced payment response validation
+        const validation = validateESewaResponse(paymentResponse);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
+
+        // Log payment response received
+        logPaymentSecurityEvent('payment_response_received', {
+          status: paymentResponse.status,
+          transaction_uuid: paymentResponse.transaction_uuid,
+          hasSignature: !!paymentResponse.signature,
+        });
 
         // Check if payment was successful
         if (paymentResponse.status === "COMPLETE") {

@@ -146,6 +146,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [pathname, clearAuthAndLogout])
 
+  // Listen for security events
+  useEffect(() => {
+    const handleAuthFailure = () => {
+      console.warn('[AuthContext] Security event detected, logging out user');
+      clearAuthAndLogout();
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      router.push("/auth/login");
+    };
+
+    // Listen for auth-failure events from axios interceptor
+    window.addEventListener('auth-failure', handleAuthFailure);
+
+    return () => {
+      window.removeEventListener('auth-failure', handleAuthFailure);
+    };
+  }, [clearAuthAndLogout, router, toast]);
+
   // Run the initialization logic when the component mounts or path changes
   useEffect(() => {
     initializeAuth()

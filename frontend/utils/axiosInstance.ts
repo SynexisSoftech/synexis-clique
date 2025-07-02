@@ -172,6 +172,21 @@ export const clearApiToken = () => {
   delete apiClient.defaults.headers.common["Authorization"]
 }
 
+// CSRF token management
+let csrfToken: string | null = null;
+
+// Get CSRF token from server
+const getCSRFToken = async () => {
+  try {
+    const response = await apiClient.get('/api/auth/csrf-token');
+    csrfToken = response.data.csrfToken;
+    console.log('[CSRF] Token obtained:', csrfToken ? 'Success' : 'Failed');
+    console.log('[CSRF] Session ID:', response.data.sessionId);
+  } catch (error) {
+    console.error('[CSRF] Failed to get token:', error);
+  }
+};
+
 // Initialize token on app start
 const initializeToken = () => {
   const token = getStoredToken()
@@ -179,6 +194,9 @@ const initializeToken = () => {
     updateApiToken(token)
   }
 }
+
+// Initialize CSRF token
+getCSRFToken();
 
 // Call this when the module loads
 initializeToken()
@@ -193,6 +211,12 @@ apiClient.interceptors.request.use(
         config.headers["Authorization"] = `Bearer ${token}`
       }
     }
+
+    // Add CSRF token to non-GET requests
+    if (csrfToken && config.method !== 'get') {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
+
     return config
   },
   (error) => {
@@ -204,6 +228,31 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+
+    // Handle CSRF violations
+    if (error.response?.status === 403 && error.response?.data?.error === 'CSRF_TOKEN_INVALID') {
+      console.warn('[CSRF] Token invalid, refreshing...');
+      await getCSRFToken(); // Refresh CSRF token
+      if (csrfToken) {
+        originalRequest.headers['X-CSRF-Token'] = csrfToken;
+        return apiClient(originalRequest); // Retry with new CSRF token
+      }
+    }
+
+    // Handle account lockout
+    if (error.response?.status === 423) {
+      const lockRemaining = error.response?.data?.lockRemaining;
+      console.warn(`[Security] Account locked for ${lockRemaining} minutes`);
+      // You can show a user-friendly message here
+      return Promise.reject(error);
+    }
+
+    // Handle rate limiting
+    if (error.response?.status === 429) {
+      console.warn('[Security] Rate limit exceeded');
+      // You can show a user-friendly message here
+      return Promise.reject(error);
+    }
 
     // Check if it's a 401 error and not a retry attempt
     if (error.response?.status === 401 && !originalRequest._retry) {

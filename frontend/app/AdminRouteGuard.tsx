@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from './context/AuthContext'; // Adjust path to your AuthContext
 import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode, useState } from 'react';
+import { showSecurityToast } from '../components/ui/security-toast';
 
 // Define a type for the component's props for clarity.
 interface AdminRouteGuardProps {

@@ -38,28 +38,35 @@ export default function LoginForm() {
 
     try {
       // Call the login function from the context
-      const response = await login({ email, password })
+      await login({ email, password })
 
-      // Handle successful login
-      if (response?.success) {
-        setBackendResponse({
-          type: "success",
-          message: response.message || "Login successful! Redirecting...",
-        })
-
-        // Small delay to show success message before redirect
-        setTimeout(() => {
-          router.push("/")
-        }, 1500)
-      }
+      // Login successful - AuthContext will handle redirect
+      setBackendResponse({
+        type: "success",
+        message: "Login successful! Redirecting...",
+      })
     } catch (err: any) {
       // Handle all types of backend errors
       console.error("Login submission failed:", err)
 
       let errorMessage = "An unexpected error occurred. Please try again."
+      let errorType: "error" | "info" = "error"
 
-      // Extract error message from different possible error structures
-      if (err?.response?.data?.message) {
+      // Handle specific security error codes
+      if (err?.response?.status === 423) {
+        // Account locked
+        const lockRemaining = err.response?.data?.lockRemaining || 15;
+        errorMessage = `Account temporarily locked. Please try again in ${lockRemaining} minutes.`;
+        errorType = "info";
+      } else if (err?.response?.status === 429) {
+        // Rate limited
+        errorMessage = "Too many login attempts. Please wait a moment before trying again.";
+        errorType = "info";
+      } else if (err?.response?.status === 403 && err?.response?.data?.error === 'CSRF_TOKEN_INVALID') {
+        // CSRF violation
+        errorMessage = "Security token expired. Please refresh the page and try again.";
+        errorType = "info";
+      } else if (err?.response?.data?.message) {
         errorMessage = err.response.data.message
       } else if (err?.response?.data?.error) {
         errorMessage = err.response.data.error
@@ -70,7 +77,7 @@ export default function LoginForm() {
       }
 
       setBackendResponse({
-        type: "error",
+        type: errorType,
         message: errorMessage,
       })
     } finally {

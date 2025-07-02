@@ -17,7 +17,9 @@ export interface IUser extends Document {
  photoURL: string;
  isVerified: boolean;
  role: UserRole;
-  isBlocked: boolean; // <-- ADD THIS LINE
+ isBlocked: boolean;
+ loginAttempts: number;
+ lockUntil?: Date;
  passwordResetOTP?: string;
  passwordResetExpires?: Date;
  createdAt: Date;
@@ -40,7 +42,9 @@ lowercase: true,
  password: { type: String, required: true, minlength: 8 },
  photoURL: { type: String, default: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png' },
  isVerified: { type: Boolean, default: false },
-    isBlocked: { type: Boolean, default: false }, // <-- ADD THIS LINE
+ isBlocked: { type: Boolean, default: false },
+ loginAttempts: { type: Number, default: 0 },
+ lockUntil: { type: Date },
  role: {
  type: String,
  enum: Object.values(UserRole),
