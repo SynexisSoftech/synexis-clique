@@ -91,7 +91,7 @@ export const signup = asyncHandler(async (req: Request, res: Response): Promise<
     // 4. Generate and store an OTP for email verification.
     // This calls a service responsible for creating the OTP record in the DB
     // and sending the email.
-    const otpResult = await OtpService.generateAndStoreOtp(email, OtpPurpose.SIGNUP_VERIFICATION);
+    const otpResult = await OtpService.generateAndStoreOtp(email, OtpPurpose.SIGNUP_VERIFICATION, finalUsername);
 
     // Check if the OTP generation/sending process was successful.
     if (!otpResult.success) {
@@ -236,7 +236,10 @@ export const resendSignupOtp = asyncHandler(async (req: Request, res: Response):
 
     // 2. Generate and store a new OTP.
     // This will replace any old unverified OTPs for this email and purpose.
-    const otpResult = await OtpService.generateAndStoreOtp(email, OtpPurpose.SIGNUP_VERIFICATION);
+    // For resend, we need to get the username from existing user or generate a temporary one
+    const existingUser = await UserModel.findOne({ email });
+    const username = existingUser?.username || email.split('@')[0]; // Fallback to email prefix
+    const otpResult = await OtpService.generateAndStoreOtp(email, OtpPurpose.SIGNUP_VERIFICATION, username);
     if (!otpResult.success) {
       // If OTP generation/sending fails, return an error.
       console.error(`[Resend OTP] Failed to generate/store OTP for ${email}: ${otpResult.message}`);
@@ -407,7 +410,7 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response): 
     console.log(`[Forgot Password] Hashed OTP stored for ${email}.`);
 
     // 4. Send the plain OTP to the user's email via the OTP service.
-    await OtpService.sendPasswordResetOtpByEmail(user.email, plainOtp);
+    await OtpService.sendPasswordResetOtpByEmail(user.email, plainOtp, user.username || user.email.split('@')[0]);
     console.log(`[Forgot Password] Password reset OTP email triggered for ${email}.`);
 
     // 5. Respond with a generic success message.
@@ -498,7 +501,7 @@ export const resendForgotPasswordOtp = asyncHandler(async (req: Request, res: Re
     console.log(`[Resend Forgot Password OTP] New hashed OTP stored for ${email}.`);
 
     // 4. Send the new plain OTP to the user's email.
-    await OtpService.sendPasswordResetOtpByEmail(user.email, plainOtp);
+    await OtpService.sendPasswordResetOtpByEmail(user.email, plainOtp, user.username || user.email.split('@')[0]);
     console.log(`[Resend Forgot Password OTP] New password reset OTP email triggered for ${email}.`);
 
     // 5. Respond with a generic success message.

@@ -34,19 +34,19 @@ const getESewaConfig = (): ESewaConfig => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const isTest = process.env.NODE_ENV === 'test';
   
-  // Base configuration
+  // Base configuration - ALL credentials must come from environment variables
   const baseConfig: ESewaConfig = {
-    // Core settings - use environment variables in production
-    SECRET_KEY: process.env.ESEWA_SECRET_KEY || "8gBm/:&EnhH.1/q",
-    PRODUCT_CODE: process.env.ESEWA_PRODUCT_CODE || "EPAYTEST",
-    MERCHANT_ID: process.env.ESEWA_MERCHANT_ID || "EPAYTEST",
+    // Core settings - ALWAYS use environment variables
+    SECRET_KEY: process.env.ESEWA_SECRET_KEY || "",
+    PRODUCT_CODE: process.env.ESEWA_PRODUCT_CODE || "",
+    MERCHANT_ID: process.env.ESEWA_MERCHANT_ID || "",
     
     // URLs
     SUCCESS_URL: process.env.ESEWA_SUCCESS_URL || "http://localhost:3000/success",
     FAILURE_URL: process.env.ESEWA_FAILURE_URL || "http://localhost:3000/failure",
     VERIFICATION_URL: process.env.ESEWA_VERIFICATION_URL || "https://esewa.com.np/epay/transrec",
     
-    // Security settings - strict in production
+    // Security settings - strict in production, relaxed in development
     ENABLE_STRICT_SIGNATURE: isProduction,
     ENABLE_IP_WHITELIST: isProduction,
     ENABLE_TIMESTAMP_VALIDATION: isProduction,
@@ -102,17 +102,19 @@ const getESewaConfig = (): ESewaConfig => {
     baseConfig.ENABLE_TIMESTAMP_VALIDATION = true;
   }
   
-  // Development overrides
+  // Development overrides - NO HARDCODED CREDENTIALS
   if (isDevelopment || isTest) {
     // Relaxed security for development
     baseConfig.ENABLE_STRICT_SIGNATURE = false;
     baseConfig.ENABLE_IP_WHITELIST = false;
     baseConfig.ENABLE_TIMESTAMP_VALIDATION = false;
     
-    // Use test credentials
-    baseConfig.SECRET_KEY = "8gBm/:&EnhH.1/q";
-    baseConfig.PRODUCT_CODE = "EPAYTEST";
-    baseConfig.MERCHANT_ID = "EPAYTEST";
+    // Check if development credentials are provided in environment
+    if (!process.env.ESEWA_SECRET_KEY || !process.env.ESEWA_PRODUCT_CODE || !process.env.ESEWA_MERCHANT_ID) {
+      console.warn('[eSewa Config] Development mode: Missing eSewa credentials in environment variables.');
+      console.warn('[eSewa Config] Please set ESEWA_SECRET_KEY, ESEWA_PRODUCT_CODE, and ESEWA_MERCHANT_ID in your .env file.');
+      console.warn('[eSewa Config] You can get test credentials from eSewa developer portal.');
+    }
   }
   
   return baseConfig;
@@ -165,13 +167,22 @@ export const logESewaConfigStatus = (): void => {
   console.log('[eSewa Config] Timestamp Validation:', ESEWA_CONFIG.ENABLE_TIMESTAMP_VALIDATION);
   
   if (!isProduction) {
-    console.log('[eSewa Config] Using test credentials for development');
+    console.log('[eSewa Config] Development mode: Using environment variables for credentials');
+    if (!process.env.ESEWA_SECRET_KEY) {
+      console.warn('[eSewa Config] ⚠️  ESEWA_SECRET_KEY not set in environment');
+    }
+    if (!process.env.ESEWA_PRODUCT_CODE) {
+      console.warn('[eSewa Config] ⚠️  ESEWA_PRODUCT_CODE not set in environment');
+    }
+    if (!process.env.ESEWA_MERCHANT_ID) {
+      console.warn('[eSewa Config] ⚠️  ESEWA_MERCHANT_ID not set in environment');
+    }
   }
   
   const validation = validateESewaConfig();
   if (!validation.valid) {
     console.error('[eSewa Config] Configuration errors:', validation.errors);
   } else {
-    console.log('[eSewa Config] Configuration is valid');
+    console.log('[eSewa Config] ✅ Configuration is valid');
   }
 }; 

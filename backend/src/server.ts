@@ -7,6 +7,8 @@ import { setupSwagger } from '../swagger'; // ✅ Import Swagger setup
 import cors from 'cors';
 import helmet from 'helmet'; // Add helmet for security headers
 import { logESewaConfigStatus } from './config/esewa.config';
+import { monitoringService } from './services/monitoring.service';
+import { deadLetterQueueService } from './services/deadLetterQueue.service';
 
  // Add this line to import category routes
 import adminRouter from './routes/admin/admin.routes';
@@ -146,6 +148,10 @@ const startServer = async () => {
       
       // Log eSewa configuration status
       logESewaConfigStatus();
+      
+      // Initialize monitoring and DLQ services
+      console.log('🔍 Monitoring service initialized');
+      console.log('📬 Dead Letter Queue service initialized');
     });
   } catch (error) {
     console.error('❌ Error connecting to MongoDB or starting server:', error);

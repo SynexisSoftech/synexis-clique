@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
+import { ESewaSignatureVerifier } from '../utils/esewaSignature';
 import { ESEWA_CONFIG } from '../config/esewa.config';
+import ipRangeCheck from 'ip-range-check';
 
 // Check if IP is in eSewa whitelist
 const validateESewaIP = (ip: string): boolean => {
@@ -18,25 +19,8 @@ const validateESewaIP = (ip: string): boolean => {
     return true;
   }
   
-  // Production IP validation
-  const isWhitelisted = ESEWA_CONFIG.IP_WHITELIST.some((range: string) => {
-    if (range.includes('/')) {
-      // CIDR notation - simplified check
-      const [baseIP, prefix] = range.split('/');
-      const baseIPParts = baseIP.split('.').map(Number);
-      const ipParts = ip.split('.').map(Number);
-      
-      // Simple CIDR check (for production, use a proper library)
-      return ipParts.every((part, i) => {
-        const mask = parseInt(prefix) >= (i + 1) * 8 ? 255 : 
-                    parseInt(prefix) <= i * 8 ? 0 : 
-                    255 << (8 - (parseInt(prefix) - i * 8));
-        return (part & mask) === (baseIPParts[i] & mask);
-      });
-    } else {
-      return ip === range;
-    }
-  });
+  // Production IP validation using proper IP range library
+  const isWhitelisted = ipRangeCheck(ip, ESEWA_CONFIG.IP_WHITELIST);
   
   console.log('[eSewa Middleware] IP:', ip, 'Whitelisted:', isWhitelisted);
   return isWhitelisted;
@@ -70,30 +54,9 @@ const validateRequestTimestamp = (timestamp?: string): boolean => {
   }
 };
 
-// Verify eSewa signature
+// Use centralized signature verification
 const verifyESewaSignature = (data: any, signature: string): boolean => {
-  try {
-    // Create signature string in the format expected by eSewa
-    const signatureString = `${data.total_amount},${data.transaction_uuid},${data.product_code}`;
-    
-    // Create HMAC using SHA256
-    const expectedSignature = crypto
-      .createHmac('sha256', ESEWA_CONFIG.SECRET_KEY)
-      .update(signatureString)
-      .digest('hex');
-    
-    console.log('[eSewa Middleware] Signature verification:', {
-      data: signatureString,
-      expected: expectedSignature,
-      received: signature,
-      match: expectedSignature === signature
-    });
-    
-    return expectedSignature === signature;
-  } catch (error) {
-    console.error('[eSewa Middleware] Signature verification error:', error);
-    return false;
-  }
+  return ESewaSignatureVerifier.verify(data, signature);
 };
 
 // eSewa webhook security middleware

@@ -6,6 +6,10 @@ import { Product } from '../../models/product.model'; // Adjust path
 import crypto from 'crypto';
 import { sendOrderConfirmationEmail } from '../../services/email.service';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { ESewaSignatureVerifier } from '../../utils/esewaSignature';
+import ipRangeCheck from 'ip-range-check';
+import { monitoringService } from '../../services/monitoring.service';
+import { deadLetterQueueService } from '../../services/deadLetterQueue.service';
 
 import { ESEWA_CONFIG } from '../../config/esewa.config';
 
@@ -42,26 +46,8 @@ const validateESewaIP = (ip: string): boolean => {
     return true;
   }
   
-  // Production IP validation
-  const isWhitelisted = ESEWA_IP_WHITELIST.some(range => {
-    // Simple IP range check (you might want to use a proper IP range library)
-    if (range.includes('/')) {
-      // CIDR notation - simplified check
-      const [baseIP, prefix] = range.split('/');
-      const baseIPParts = baseIP.split('.').map(Number);
-      const ipParts = ip.split('.').map(Number);
-      
-      // Simple CIDR check (for production, use a proper library)
-      return ipParts.every((part, i) => {
-        const mask = parseInt(prefix) >= (i + 1) * 8 ? 255 : 
-                    parseInt(prefix) <= i * 8 ? 0 : 
-                    255 << (8 - (parseInt(prefix) - i * 8));
-        return (part & mask) === (baseIPParts[i] & mask);
-      });
-    } else {
-      return ip === range;
-    }
-  });
+  // Production IP validation using proper IP range library
+  const isWhitelisted = ipRangeCheck(ip, ESEWA_IP_WHITELIST);
   
   console.log('[IP Validation] IP:', ip, 'Whitelisted:', isWhitelisted);
   return isWhitelisted;
@@ -95,49 +81,9 @@ const logAuditEvent = (event: string, userId: string, orderId: string, details: 
   console.log(`[AUDIT] ${new Date().toISOString()} - ${event} - User: ${userId} - Order: ${orderId} - Details:`, details);
 };
 
-// Verify eSewa signature - Enhanced based on eSewa documentation
+// Use centralized signature verification
 const verifyESewaSignature = (data: any, signature: string): boolean => {
-  try {
-    console.log('[Signature Verification] Input data:', {
-      total_amount: data.total_amount,
-      transaction_uuid: data.transaction_uuid,
-      product_code: data.product_code || ESEWA_CONFIG.PRODUCT_CODE,
-      received_signature: signature
-    });
-
-    // Handle different data formats as per eSewa documentation
-    const total_amount = data.total_amount || data.totalAmount;
-    const transaction_uuid = data.transaction_uuid || data.transactionUuid;
-    const product_code = data.product_code || ESEWA_CONFIG.PRODUCT_CODE;
-
-    // Create message string exactly as per eSewa documentation
-    // Format: total_amount={amount},transaction_uuid={uuid},product_code={code}
-    const message = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
-    console.log('[Signature Verification] Message to sign:', message);
-
-    // Generate signature using HMAC-SHA256 as per eSewa docs
-    const expectedSignature = crypto
-      .createHmac("sha256", ESEWA_CONFIG.SECRET_KEY)
-      .update(message)
-      .digest("base64");
-
-    console.log('[Signature Verification] Expected signature:', expectedSignature);
-    console.log('[Signature Verification] Received signature:', signature);
-
-    // Compare signatures
-    const signaturesMatch = signature === expectedSignature;
-    console.log('[Signature Verification] Signatures match:', signaturesMatch);
-
-    // Additional verification: Check if using test credentials
-    if (ESEWA_CONFIG.SECRET_KEY === "8gBm/:&EnhH.1/q") {
-      console.log('[Signature Verification] Using test credentials - signature verification may be lenient');
-    }
-
-    return signaturesMatch;
-  } catch (error) {
-    console.error('[Signature Verification] Error:', error);
-    return false;
-  }
+  return ESewaSignatureVerifier.verify(data, signature);
 };
 
 // Validate order data
@@ -265,12 +211,12 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
     // Generate secure transaction UUID
     const transaction_uuid = crypto.randomUUID();
 
-    // Generate eSewa signature
-    const message = `total_amount=${totalAmount},transaction_uuid=${transaction_uuid},product_code=${ESEWA_CONFIG.PRODUCT_CODE}`;
-    const signature = crypto
-      .createHmac("sha256", ESEWA_CONFIG.SECRET_KEY)
-      .update(message)
-      .digest("base64");
+    // Generate eSewa signature using centralized utility
+    const signature = ESewaSignatureVerifier.generate({
+      total_amount: totalAmount,
+      transaction_uuid,
+      product_code: ESEWA_CONFIG.PRODUCT_CODE
+    });
 
     // Create order
     const order = await Order.create([{
@@ -315,6 +261,16 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
   } catch (error: any) {
     await session.abortTransaction();
     console.error("[Order Controller] Create Order Error:", error.message);
+    
+    // Log order failure for monitoring
+    if (req.user) {
+      monitoringService.logOrderFailure(
+        req.body.transaction_uuid || 'unknown',
+        req.user._id.toString(),
+        error.message
+      );
+    }
+    
     res.status(500).json({ message: "Server error while creating order" });
   } finally {
     session.endSession();
@@ -419,14 +375,18 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  // Extract variables early for error handling
+  const { 
+    transaction_uuid, 
+    transaction_code, 
+    status, 
+    total_amount,
+    signature 
+  } = req.body;
+
+  let order: any = null; // Declare order variable for error handling
+
   try {
-    const { 
-      transaction_uuid, 
-      transaction_code, 
-      status, 
-      total_amount,
-      signature 
-    } = req.body;
 
     console.log('[Payment Verification] Processing payment:', {
       transaction_uuid,
@@ -439,7 +399,7 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
     });
 
     // Find the order
-    const order = await Order.findOne({ transaction_uuid }).session(session);
+    order = await Order.findOne({ transaction_uuid }).session(session);
     if (!order) {
       await session.abortTransaction();
       console.error('[Payment Verification] Order not found:', transaction_uuid);
@@ -533,11 +493,28 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
       if (product.stockQuantity < item.quantity) {
         await session.abortTransaction();
         console.error(`[Payment Verification] Insufficient stock for product: ${product.title}`);
+        
+        // Log stock depletion alert
+        monitoringService.logStockDepletion(
+          product._id.toString(),
+          product.title,
+          product.stockQuantity
+        );
+        
         res.status(400).json({ message: `Insufficient stock for product: ${product.title}` });
         return;
       }
 
       product.stockQuantity -= item.quantity;
+      
+      // Log stock depletion if stock is low or depleted
+      if (product.stockQuantity <= 5) {
+        monitoringService.logStockDepletion(
+          product._id.toString(),
+          product.title,
+          product.stockQuantity
+        );
+      }
       
       if (product.stockQuantity === 0) {
         product.status = 'out-of-stock';
@@ -598,6 +575,25 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
   } catch (error: any) {
     await session.abortTransaction();
     console.error('[Payment Verification] Error:', error.message);
+    
+    // Add to dead letter queue for retry
+    try {
+      if (order && transaction_uuid && total_amount) {
+        await deadLetterQueueService.addFailedPayment(
+          order._id.toString(),
+          order.userId.toString(),
+          transaction_uuid,
+          parseFloat(total_amount),
+          status || 'UNKNOWN',
+          error.message,
+          transaction_code,
+          signature
+        );
+      }
+    } catch (dlqError) {
+      console.error('[Payment Verification] Failed to add to DLQ:', dlqError);
+    }
+    
     res.status(500).json({ message: 'Server error while verifying payment' });
   } finally {
     session.endSession();

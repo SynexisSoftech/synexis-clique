@@ -10,7 +10,7 @@ export const SECURITY_CONFIG = {
 
   // eSewa Payment Gateway Configuration
   ESEWA: {
-    SECRET_KEY: process.env.ESEWA_SECRET_KEY || "8gBm/:&EnhH.1/q",
+    SECRET_KEY: process.env.ESEWA_SECRET_KEY || "",
     PRODUCT_CODE: process.env.ESEWA_PRODUCT_CODE || "EPAYTEST",
     MERCHANT_ID: process.env.ESEWA_MERCHANT_ID || "EPAYTEST",
     SUCCESS_URL: process.env.ESEWA_SUCCESS_URL || "http://localhost:3000/success",
