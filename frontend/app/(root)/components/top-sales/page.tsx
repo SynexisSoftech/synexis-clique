@@ -320,6 +320,13 @@ export default function TopSalesSection() {
                         )}
                       </div>
 
+                      {/* VAT Included Badge */}
+                      <div className="mb-3">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-2 py-1 text-xs">
+                          VAT Included
+                        </Badge>
+                      </div>
+
                       {/* Sales Indicator */}
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-1">

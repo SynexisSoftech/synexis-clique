@@ -24,8 +24,11 @@ export interface Product {
   shortDescription?: string;
   categoryId: string | { _id: string; title: string };
   subcategoryId?: string | { _id: string; title: string }; // Optional
-  originalPrice: number;
-  discountPrice?: number;
+  originalPrice: number; // Tax-inclusive price
+  discountPrice?: number; // Tax-inclusive discounted price
+  basePrice: number; // Price before tax
+  discountBasePrice?: number; // Discounted price before tax
+  taxRate: number; // Tax rate (default 13% for Nepal)
   stockQuantity: number;
   features?: string[];
   colors?: string[];
@@ -51,7 +54,7 @@ export interface Product {
  * Data required to create a new product.
  * `images` is an array of base64 data URIs for upload, as expected by the controller.
  */
-export type CreateProductData = Omit<Product, '_id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'categoryId' | 'subcategoryId'> & {
+export type CreateProductData = Omit<Product, '_id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'categoryId' | 'subcategoryId' | 'basePrice' | 'discountBasePrice'> & {
   categoryId: string;
   subcategoryId?: string;
   images: string[]; // Base64 data URIs for new product creation

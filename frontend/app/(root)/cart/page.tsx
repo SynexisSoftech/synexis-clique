@@ -49,9 +49,8 @@ export default function CartPage() {
   }
 
   const subtotal = getTotalPrice()
-  const shipping = subtotal > 0 ? 500 : 0
-  const tax = Math.round(subtotal * 0.13)
-  const total = subtotal + shipping + tax
+  const shipping = 0 // Shipping will be calculated at checkout based on city
+  const total = subtotal + shipping // Total already includes tax
 
   const handleRemoveItem = async (productId: string, productName: string) => {
     try {
@@ -440,11 +439,10 @@ const handleIncreaseQuantity = async (
                     </div>
                     <div className="flex justify-between text-slate-600 font-cormorant">
                       <span>Shipping</span>
-                      <span>{shipping > 0 ? formatPrice(shipping) : "Free"}</span>
+                      <span>Calculated at checkout</span>
                     </div>
-                    <div className="flex justify-between text-slate-600 font-cormorant">
-                      <span>Tax (13%)</span>
-                      <span>{formatPrice(tax)}</span>
+                    <div className="text-xs text-slate-500 italic font-cormorant">
+                      * All prices include 13% VAT
                     </div>
                     <Separator className="bg-[#6F4E37]/20" />
                     <div className="flex justify-between text-lg font-bold text-[#6F4E37] font-cormorant">

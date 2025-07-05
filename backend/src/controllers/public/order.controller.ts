@@ -248,8 +248,19 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       }
     }
 
-    const taxAmount = Math.round(subtotal * 0.13);
-    const totalAmount = subtotal + shippingCharge + taxAmount;
+    // Calculate tax from tax-inclusive prices
+    let totalTaxAmount = 0;
+    for (const item of orderItems) {
+      const product = await Product.findById(item.productId).session(session);
+      if (product) {
+        const effectivePrice = product.discountPrice || product.originalPrice;
+        const basePrice = effectivePrice / (1 + product.taxRate);
+        const itemTax = effectivePrice - basePrice;
+        totalTaxAmount += itemTax * item.quantity;
+      }
+    }
+
+    const totalAmount = subtotal + shippingCharge; // subtotal already includes tax
     
     // Generate secure transaction UUID
     const transaction_uuid = crypto.randomUUID();
@@ -271,7 +282,7 @@ export const createOrder = async (req: AuthRequest, res: Response, next: NextFun
       status: 'PENDING',
       shippingInfo,
       shippingCharge,
-      tax: taxAmount
+      tax: Math.round(totalTaxAmount)
     }], { session });
 
     // Log audit event

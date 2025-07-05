@@ -446,6 +446,7 @@ export default function EditProductPage() {
         subcategoryId: formData.subcategoryId || undefined,
         originalPrice: Number(formData.originalPrice),
         discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
+        taxRate: 0.13, // Fixed 13% VAT rate for Nepal
         stockQuantity: Number(formData.stockQuantity),
         features: (formData.features || []).length > 0 ? formData.features : undefined,
         colors: (formData.colors || []).length > 0 ? formData.colors!.map((c) => c.name) : undefined,
@@ -978,7 +979,7 @@ export default function EditProductPage() {
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="originalPrice">Original Price *</Label>
+                      <Label htmlFor="originalPrice">Original Price (VAT included) *</Label>
                       <Input
                         id="originalPrice"
                         type="number"
@@ -993,9 +994,10 @@ export default function EditProductPage() {
                       {validationErrors.originalPrice && (
                         <p className="text-sm text-red-600">{validationErrors.originalPrice}</p>
                       )}
+                      <p className="text-xs text-slate-500">* Price includes 13% VAT</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="discountPrice">Discount Price</Label>
+                      <Label htmlFor="discountPrice">Discount Price (VAT included)</Label>
                       <Input
                         id="discountPrice"
                         type="number"
@@ -1005,6 +1007,7 @@ export default function EditProductPage() {
                         onChange={handleInputChange("discountPrice")}
                         min="0"
                       />
+                      <p className="text-xs text-slate-500">* Price includes 13% VAT</p>
                     </div>
                   </div>
                   <div className="space-y-2">

@@ -22,8 +22,8 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
 
     const {
         title, description, shortDescription, categoryId, subcategoryId,
-        originalPrice, // Expecting this to be a number or string convertible to number
-        discountPrice, // Expecting this to be a number or string convertible to number, or null
+        originalPrice, // Tax-inclusive price (what admin enters)
+        discountPrice, // Tax-inclusive discounted price
         stockQuantity, // Expecting this to be a number or string convertible to number
         features, colors, sizes, brand, seoKeywords,
         tags, returnPolicy, warranty, weight, dimensions, material,
@@ -62,8 +62,12 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
         return;
     }
 
+    // Calculate base price (price before tax)
+    const basePrice = Math.round(numOriginalPrice / (1 + Number(0.13)));
 
-    let numDiscountPrice: number | undefined | null = undefined; // Mongoose schema might store null or undefined for no discount
+    let numDiscountPrice: number | undefined | null = undefined;
+    let discountBasePrice: number | undefined | null = undefined;
+    
     if (discountPrice !== undefined && discountPrice !== null && String(discountPrice).trim() !== "") {
         numDiscountPrice = Number(discountPrice);
         if (isNaN(numDiscountPrice)) {
@@ -78,10 +82,15 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
             res.status(400).json({ message: 'Discount price must be less than original price.' });
             return;
         }
-    } else if (discountPrice === null) { // Explicitly passed as null from frontend
-        numDiscountPrice = null; // To unset it in Mongoose if schema allows
+        // Calculate discount base price
+        discountBasePrice = Math.round(numDiscountPrice / (1 + Number(0.13)));
+    } else if (discountPrice === null) {
+        numDiscountPrice = null;
+        discountBasePrice = null;
     }
 
+    // Validate tax rate
+    const numTaxRate = 0.13; // Fixed 13% VAT rate for Nepal
 
     // Validate images array (now expecting base64 strings)
     if (!Array.isArray(images) || images.length === 0) {
@@ -135,8 +144,11 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
         const product = new Product({
             title, description, shortDescription, categoryId,
             subcategoryId: subcategoryId || undefined, // Handle optional subcategory
-            originalPrice: numOriginalPrice, // Use parsed number
-            discountPrice: numDiscountPrice, // Use parsed number or null/undefined
+            originalPrice: numOriginalPrice, // Tax-inclusive price
+            discountPrice: numDiscountPrice, // Tax-inclusive discounted price
+            basePrice: basePrice, // Price before tax
+            discountBasePrice: discountBasePrice, // Discounted price before tax
+            taxRate: numTaxRate, // Tax rate
             stockQuantity: numStockQuantity, // Use parsed number
             features, colors, sizes, brand, seoKeywords,
             tags, returnPolicy, warranty, weight, dimensions, material,
@@ -314,6 +326,25 @@ export const updateProduct = async (req: AuthRequest, res: Response, next: NextF
 
         const newOriginalPrice = originalPrice !== undefined ? parseFloat(originalPrice) : product.originalPrice;
         const newDiscountPrice = discountPrice !== undefined ? (discountPrice === null ? null : parseFloat(discountPrice)) : product.discountPrice;
+
+        // Calculate base prices from tax-inclusive prices
+        const numTaxRate = 0.13; // Fixed 13% VAT rate for Nepal
+        if (originalPrice !== undefined) {
+            const basePrice = Math.round(newOriginalPrice / (1 + numTaxRate));
+            product.basePrice = basePrice;
+        }
+        
+        if (discountPrice !== undefined) {
+            if (newDiscountPrice === null || newDiscountPrice === undefined) {
+                product.discountBasePrice = undefined;
+            } else {
+                const discountBasePrice = Math.round(newDiscountPrice / (1 + numTaxRate));
+                product.discountBasePrice = discountBasePrice;
+            }
+        }
+
+        // Always set tax rate to 13% for Nepal
+        product.taxRate = numTaxRate;
 
 
         if (newDiscountPrice !== null && newDiscountPrice !== undefined && newOriginalPrice !== undefined && newDiscountPrice >= newOriginalPrice) {

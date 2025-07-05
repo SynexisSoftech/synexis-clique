@@ -167,6 +167,14 @@ export default function OrderDetailsModal({ order, open, onClose }: OrderDetails
                   <span className="text-[#6F4E37] font-cormorant">{formatPrice(order.amount)}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-[#6F4E37]/70 font-cormorant">Shipping:</span>
+                  <span className="text-[#6F4E37] font-cormorant">{formatPrice(order.shippingCharge || 0)}</span>
+                </div>
+                <div className="text-xs text-[#6F4E37]/50 italic font-cormorant">
+                  * All prices include 13% VAT
+                </div>
+                <Separator className="bg-[#6F4E37]/20" />
+                <div className="flex justify-between">
                   <span className="text-[#6F4E37]/70 font-cormorant">Total Amount:</span>
                   <span className="font-bold text-lg text-[#6F4E37] font-cormorant">
                     {formatPrice(order.totalAmount)}

@@ -150,7 +150,7 @@ export const sendOrderConfirmationEmail = async (orderData: OrderConfirmationDat
                 <span>NPR ${shippingCharge.toLocaleString()}</span>
               </div>
               <div class="item">
-                <span>Tax (13%):</span>
+                <span>VAT (13% included):</span>
                 <span>NPR ${tax.toLocaleString()}</span>
               </div>
               <div class="item" style="font-weight: bold; font-size: 18px; border-top: 2px solid #4F46E5; padding-top: 10px; margin-top: 10px;">
@@ -212,7 +212,7 @@ ${orderItems.map(item => `- ${item.productTitle} × ${item.quantity} - NPR ${ite
 PRICE BREAKDOWN:
 Subtotal: NPR ${subtotal.toLocaleString()}
 Shipping Charge: NPR ${shippingCharge.toLocaleString()}
-Tax (13%): NPR ${tax.toLocaleString()}
+VAT (13% included): NPR ${tax.toLocaleString()}
 Total Amount: NPR ${totalAmount.toLocaleString()}
 
 SHIPPING INFORMATION:

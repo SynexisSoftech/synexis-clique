@@ -736,6 +736,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                     NPR {product.originalPrice.toLocaleString()}
                   </p>
                 )}
+                
+                {/* VAT Included Badge */}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-2 py-1 text-xs">
+                    <Shield className="h-3 w-3 mr-1" />
+                    VAT Included
+                  </Badge>
+                  <span className="text-xs text-slate-500">All prices include 13% VAT</span>
+                </div>
 
                 {/* Enhanced Status Badges */}
                 <div className="flex flex-wrap gap-2">

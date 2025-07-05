@@ -208,6 +208,13 @@ export function ProductShowcase() {
                           <span className="text-lg font-bold text-primary">{formatPrice(product.originalPrice, 'NPR')}</span>
                         )}
                       </div>
+                      
+                      {/* VAT Included Badge */}
+                      <div className="mb-3">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-2 py-1 text-xs">
+                          VAT Included
+                        </Badge>
+                      </div>
 
                       {/* Rating */}
                       {product.rating && (

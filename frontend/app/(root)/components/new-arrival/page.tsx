@@ -198,6 +198,13 @@ export default function NewArrivalsSection() {
                         )}
                       </div>
 
+                      {/* VAT Included Badge */}
+                      <div className="mb-3">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-2 py-1 text-xs">
+                          VAT Included
+                        </Badge>
+                      </div>
+
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           {product.rating && (

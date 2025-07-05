@@ -278,8 +278,20 @@ export default function CheckoutPage() {
       return total + price * item.quantity
     }, 0) || 0
 
+  // Calculate tax from tax-inclusive prices
+  const calculateTaxFromInclusive = () => {
+    return cart.items.reduce((total, item) => {
+      const price = item.productId.discountPrice || item.productId.originalPrice
+      const taxRate = 0.13 // Default Nepal VAT rate
+      const basePrice = price / (1 + taxRate)
+      const itemTax = price - basePrice
+      return total + itemTax * item.quantity
+    }, 0) || 0
+  }
+
   const shipping = shippingCharge
-  const total = subtotal + shipping
+  const tax = Math.round(calculateTaxFromInclusive())
+  const total = subtotal + shipping // Total already includes tax
 
   const handleShippingChange = (field: keyof ShippingInfo, value: string) => {
     setShippingInfo((prev) => ({ ...prev, [field]: value }))
@@ -839,6 +851,9 @@ export default function CheckoutPage() {
                     <span className="text-slate-900">
                       {selectedCity ? `${selectedCity} - ${formatPrice(shipping)}` : "Select city"}
                     </span>
+                  </div>
+                  <div className="text-xs text-slate-500 italic">
+                    * All prices include 13% VAT
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

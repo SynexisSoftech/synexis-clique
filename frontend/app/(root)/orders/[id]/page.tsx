@@ -252,9 +252,8 @@ export default function OrderDetailsPage() {
                     <span className="text-slate-600">Shipping:</span>
                     <span className="text-slate-900">{formatPrice(order.shippingCharge || 0)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Tax:</span>
-                    <span className="text-slate-900">{formatPrice(order.tax || 0)}</span>
+                  <div className="text-xs text-slate-500 italic">
+                    * All prices include 13% VAT
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

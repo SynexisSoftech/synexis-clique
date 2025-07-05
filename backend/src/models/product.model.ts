@@ -57,8 +57,11 @@ export interface IProduct extends Document {
   shortDescription?: string;
   categoryId: mongoose.Types.ObjectId | ICategory;
   subcategoryId: mongoose.Types.ObjectId | ISubcategory;
-  originalPrice: number;
-  discountPrice?: number;
+  originalPrice: number; // Tax-inclusive price (like Daraz)
+  discountPrice?: number; // Tax-inclusive discounted price
+  basePrice: number; // Price before tax (for internal calculations)
+  discountBasePrice?: number; // Discounted price before tax
+  taxRate: number; // Tax rate (default 13% for Nepal)
   stockQuantity: number;
   features?: string[]; // CHANGED to array of strings
   colors?: string[];
@@ -128,6 +131,30 @@ const ProductSchema: Schema<IProduct> = new Schema<IProduct>(
           message: 'Discount price must be less than original price.',
         },
       ],
+    },
+    basePrice: {
+      type: Number,
+      required: [true, 'Base price (before tax) is required.'],
+      min: [0, 'Base price cannot be negative.'],
+    },
+    discountBasePrice: {
+      type: Number,
+      min: [0, 'Discount base price cannot be negative.'],
+      validate: [
+        {
+          validator: function (this: IProduct, value: number | null | undefined) {
+            if (value === null || value === undefined) return true;
+            return value < this.basePrice;
+          },
+          message: 'Discount base price must be less than base price.',
+        },
+      ],
+    },
+    taxRate: {
+      type: Number,
+      default: 0.13, // 13% VAT for Nepal
+      min: [0, 'Tax rate cannot be negative.'],
+      max: [1, 'Tax rate cannot exceed 100%.'],
     },
     stockQuantity: {
       type: Number,
