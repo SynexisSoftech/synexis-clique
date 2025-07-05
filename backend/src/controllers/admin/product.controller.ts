@@ -52,7 +52,10 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
         return;
     }
 
+    console.log('[Create Product] Original stockQuantity:', stockQuantity, 'Type:', typeof stockQuantity);
     const numStockQuantity = Number(stockQuantity);
+    console.log('[Create Product] Converted stockQuantity:', numStockQuantity, 'Type:', typeof numStockQuantity);
+    
     if (stockQuantity === undefined || stockQuantity === null || String(stockQuantity).trim() === "" || isNaN(numStockQuantity) || !Number.isInteger(numStockQuantity)) {
         res.status(400).json({ message: 'Stock quantity is required and must be a valid integer.' });
         return;
@@ -159,7 +162,10 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
             createdBy: req.user._id,
         });
 
+        console.log('[Create Product] Final product.stockQuantity:', numStockQuantity);
+
         const createdProduct = await product.save();
+        console.log('[Create Product] Saved product.stockQuantity:', createdProduct.stockQuantity);
         res.status(201).json(createdProduct);
 
     } catch (error: any) {
@@ -324,6 +330,23 @@ export const updateProduct = async (req: AuthRequest, res: Response, next: NextF
             product.subcategoryId = subcategoryId;
         }
 
+        // Validate and convert stockQuantity if provided (same logic as createProduct)
+        let numStockQuantity: number | undefined = undefined;
+        if (stockQuantity !== undefined) {
+            console.log('[Update Product] Original stockQuantity:', stockQuantity, 'Type:', typeof stockQuantity);
+            numStockQuantity = Number(stockQuantity);
+            console.log('[Update Product] Converted stockQuantity:', numStockQuantity, 'Type:', typeof numStockQuantity);
+            
+            if (stockQuantity === null || String(stockQuantity).trim() === "" || isNaN(numStockQuantity) || !Number.isInteger(numStockQuantity)) {
+                res.status(400).json({ message: 'Stock quantity must be a valid integer.' });
+                return;
+            }
+            if (numStockQuantity < 0) {
+                res.status(400).json({ message: 'Stock quantity cannot be negative.' });
+                return;
+            }
+        }
+
         const newOriginalPrice = originalPrice !== undefined ? parseFloat(originalPrice) : product.originalPrice;
         const newDiscountPrice = discountPrice !== undefined ? (discountPrice === null ? null : parseFloat(discountPrice)) : product.discountPrice;
 
@@ -368,7 +391,10 @@ if (discountPrice !== undefined) { // If discountPrice was explicitly sent in th
  product.discountPrice = newDiscountPrice; // newDiscountPrice is a number here
 }
  }
-        if (stockQuantity !== undefined) product.stockQuantity = stockQuantity;
+        if (stockQuantity !== undefined) {
+            console.log('[Update Product] Setting product.stockQuantity to:', numStockQuantity);
+            product.stockQuantity = numStockQuantity!;
+        }
         if (features !== undefined) product.features = features;
         if (colors !== undefined) product.colors = colors;
         if (sizes !== undefined) product.sizes = sizes;
@@ -386,6 +412,7 @@ if (discountPrice !== undefined) { // If discountPrice was explicitly sent in th
 
 
         const updatedProduct = await product.save();
+        console.log('[Update Product] Saved product.stockQuantity:', updatedProduct.stockQuantity);
         res.json(updatedProduct);
     } catch (error: any) {
         console.error('[Admin Product Controller] Update Product Error:', error.message);
