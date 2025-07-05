@@ -49,13 +49,10 @@ export function AddToCartButton({
 
     setIsAdding(true)
     try {
-      console.log("Button: Adding to cart", { productId, quantity })
       await addToCart(productId, quantity)
-      console.log("Button: Successfully added to cart")
       // Reset quantity to 1 after successful add
       setQuantity(1)
     } catch (error) {
-      console.error("Button: Failed to add to cart:", error)
     } finally {
       setIsAdding(false)
     }

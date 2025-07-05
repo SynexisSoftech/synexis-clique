@@ -180,10 +180,9 @@ const getCSRFToken = async () => {
   try {
     const response = await apiClient.get('/api/auth/csrf-token');
     csrfToken = response.data.csrfToken;
-    console.log('[CSRF] Token obtained:', csrfToken ? 'Success' : 'Failed');
-    console.log('[CSRF] Session ID:', response.data.sessionId);
+    
   } catch (error) {
-    console.error('[CSRF] Failed to get token:', error);
+    
   }
 };
 
@@ -231,7 +230,7 @@ apiClient.interceptors.response.use(
 
     // Handle CSRF violations
     if (error.response?.status === 403 && error.response?.data?.error === 'CSRF_TOKEN_INVALID') {
-      console.warn('[CSRF] Token invalid, refreshing...');
+      
       await getCSRFToken(); // Refresh CSRF token
       if (csrfToken) {
         originalRequest.headers['X-CSRF-Token'] = csrfToken;
@@ -242,14 +241,14 @@ apiClient.interceptors.response.use(
     // Handle account lockout
     if (error.response?.status === 423) {
       const lockRemaining = error.response?.data?.lockRemaining;
-      console.warn(`[Security] Account locked for ${lockRemaining} minutes`);
+      
       // You can show a user-friendly message here
       return Promise.reject(error);
     }
 
     // Handle rate limiting
     if (error.response?.status === 429) {
-      console.warn('[Security] Rate limit exceeded');
+      
       // You can show a user-friendly message here
       return Promise.reject(error);
     }
@@ -262,7 +261,7 @@ apiClient.interceptors.response.use(
       const storedUser = localStorage.getItem("user")
       if (!storedUser) {
         // No stored user, so no point in trying to refresh
-        console.info("[Axios Interceptor] No stored user found, skipping refresh attempt.")
+
         return Promise.reject(error)
       }
 
@@ -282,7 +281,6 @@ apiClient.interceptors.response.use(
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`
         return apiClient(originalRequest)
       } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError)
         clearApiToken()
         localStorage.removeItem("user")
         localStorage.removeItem("token")

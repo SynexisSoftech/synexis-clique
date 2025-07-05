@@ -40,7 +40,7 @@ export default function CartDropdown({ onClick }: CartDropdownProps) {
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
 
-  console.log("CartDropdown render:", { cart, cartItemsCount, isLoading })
+
 
   const items = cart?.items || []
   const subtotal = items.reduce((total, item) => {

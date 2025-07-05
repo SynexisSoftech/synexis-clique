@@ -170,7 +170,7 @@ export const logPaymentSecurityEvent = (event: string, details: any): void => {
     url: typeof window !== 'undefined' ? window.location.href : 'unknown',
   };
   
-  console.log('[Payment Security]', securityEvent);
+  
   
   // In production, you might want to send this to a security monitoring service
   if (process.env.NODE_ENV === 'production') {
@@ -232,7 +232,7 @@ export const submitSecureESewaPayment = (
     });
     
   } catch (error) {
-    console.error('Secure payment submission failed:', error);
+    
     logPaymentSecurityEvent('payment_form_error', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });

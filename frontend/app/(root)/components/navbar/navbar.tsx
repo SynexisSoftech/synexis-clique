@@ -28,7 +28,7 @@ export default function Navbar() {
   ]
 
   const handleSearch = (query: string) => {
-    console.log("Searching for:", query)
+
     router.push(`/products?search=${encodeURIComponent(query)}`)
   }
 

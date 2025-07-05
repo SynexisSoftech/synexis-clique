@@ -87,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUser = localStorage.getItem("user")
       if (!storedUser) {
         // No stored user, so no need to attempt refresh
-        console.info("[AuthContext] No stored user found, skipping refresh attempt.")
         clearAuthAndLogout()
         setIsLoading(false)
         return
@@ -124,22 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError(null)
         } else {
           // This case is unlikely but a good safeguard
-          console.warn(
-            "[AuthContext] '/api/auth/me' returned no valid user data.",
-          )
           clearAuthAndLogout()
         }
       } else {
-        console.warn(
-          "[AuthContext] Refresh token endpoint did not provide an access token.",
-        )
+
         clearAuthAndLogout()
       }
     } catch (e) {
       // This catch block handles failed refresh attempts (e.g., expired/invalid refresh token)
-      console.info(
-        "[AuthContext] Silent refresh failed. User needs to log in.",
-      )
       clearAuthAndLogout()
     } finally {
       setIsLoading(false)
@@ -149,7 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Listen for security events
   useEffect(() => {
     const handleAuthFailure = () => {
-      console.warn('[AuthContext] Security event detected, logging out user');
       clearAuthAndLogout();
       toast({
         title: "Session Expired",
@@ -218,7 +208,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const errorMessage =
         err.response?.data?.message || err.message || "An error occurred."
       setError(errorMessage)
-      console.error("Login failed:", err)
       throw new Error(errorMessage) // Re-throw to inform the component
     }
   }
@@ -228,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiClient.post("/api/auth/logout", {}, { withCredentials: true })
     } catch (e) {
-      console.error("Logout API call failed, but logging out client-side anyway.", e)
+      // Logout API call failed, but logging out client-side anyway
     } finally {
       clearAuthAndLogout()
       toast({

@@ -168,14 +168,14 @@ class OrderService {
         throw new Error(validation.error);
       }
 
-      console.log("OrderService: Sending request with data:", data);
+  
       
       const response = await apiClient.post("/api/orders", data);
-      console.log("OrderService: Received response:", response.data);
+      
       
       return response.data;
     } catch (error: any) {
-      console.error("OrderService: Request failed:", error);
+      
       
       // Handle different types of errors
       if (error.response?.status === 400) {
@@ -203,8 +203,7 @@ class OrderService {
 
       const response = await apiClient.get(`/api/orders/my-orders?page=${validPage}&limit=${validLimit}`);
       return response.data;
-    } catch (error: any) {
-      console.error("OrderService: Failed to fetch orders:", error);
+          } catch (error: any) {
       
       if (error.response?.status === 401) {
         throw new Error('Authentication required. Please log in.');
@@ -224,8 +223,7 @@ class OrderService {
 
       const response = await apiClient.get(`/api/orders/${orderId}`);
       return response.data;
-    } catch (error: any) {
-      console.error("OrderService: Failed to fetch order:", error);
+          } catch (error: any) {
       
       if (error.response?.status === 401) {
         throw new Error('Authentication required. Please log in.');
@@ -250,12 +248,11 @@ class OrderService {
         throw new Error(validation.error);
       }
 
-      console.log('🔍 OrderService: Sending payment verification request:', data);
+      
       const response = await apiClient.post('/api/orders/verify-payment', data);
-      console.log('✅ OrderService: Payment verification successful:', response.data);
+      
       return response.data;
-    } catch (error: any) {
-      console.error('❌ OrderService: Payment verification failed:', error);
+          } catch (error: any) {
       
       if (error.response?.status === 400) {
         const errorMessage = error.response.data?.message || 'Invalid payment data';

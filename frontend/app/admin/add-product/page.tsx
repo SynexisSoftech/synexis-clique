@@ -372,7 +372,7 @@ export default function AddProductPage() {
         status: formData.status,
       }
 
-      console.log("Sending payload to backend:", JSON.stringify(productPayload, null, 2))
+
 
       await productsService.createProduct(productPayload)
       router.push("/admin/products")

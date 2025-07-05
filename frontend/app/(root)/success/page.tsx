@@ -107,15 +107,6 @@ function SuccessPageContent() {
 
           // Call backend to verify payment and reduce stock
           try {
-            console.log('🔍 Starting payment verification...');
-            console.log('📊 Payment data:', {
-              transaction_uuid: paymentResponse.transaction_uuid,
-              transaction_code: paymentResponse.transaction_code,
-              status: paymentResponse.status,
-              total_amount: paymentResponse.total_amount,
-              signature: paymentResponse.signature,
-            });
-            
             const verificationResult = await orderService.verifyPayment({
               transaction_uuid: paymentResponse.transaction_uuid,
               transaction_code: paymentResponse.transaction_code,
@@ -123,8 +114,6 @@ function SuccessPageContent() {
               total_amount: paymentResponse.total_amount,
               signature: paymentResponse.signature,
             });
-            
-            console.log('✅ Payment verification successful:', verificationResult);
             setVerificationStatus('success');
             
             toast({
@@ -132,11 +121,6 @@ function SuccessPageContent() {
               description: "Your order has been placed successfully and stock has been updated.",
             });
           } catch (verificationError: any) {
-            console.error('❌ Error calling payment verification:', verificationError);
-            console.error('❌ Error details:', {
-              message: verificationError.message,
-              stack: verificationError.stack,
-            });
             setVerificationStatus('failed');
             
             toast({
@@ -154,7 +138,6 @@ function SuccessPageContent() {
           })
         }
       } catch (error: any) {
-        console.error("Error processing payment data:", error)
         setIsSuccess(false)
         toast({
           title: "Error",

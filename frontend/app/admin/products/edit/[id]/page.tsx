@@ -466,7 +466,7 @@ export default function EditProductPage() {
         status: formData.status!,
       }
 
-      console.log("Sending update payload to backend:", JSON.stringify(updatePayload, null, 2))
+
 
       await productsService.updateProduct(updatePayload)
       router.push("/admin/products")

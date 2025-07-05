@@ -19,7 +19,7 @@ export default function SearchComponent({ onSearch }: SearchComponentProps) {
     e.preventDefault()
     if (searchQuery.trim()) {
       onSearch?.(searchQuery)
-      console.log("Searching for:", searchQuery)
+  
     }
   }
 

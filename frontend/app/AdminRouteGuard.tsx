@@ -46,7 +46,6 @@ const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
     //    This covers all unauthorized cases: not logged in, logged in as a regular user,
     //    or any other invalid state.
     if (!isAuthenticated || user?.role !== 'admin') {
-      console.warn(`[AdminRouteGuard] Access Denied. IsAuthenticated: ${isAuthenticated}, User Role: ${user?.role}. Redirecting to /auth/login.`);
       router.replace('/auth/login');
       // Use replace to avoid adding the blocked page to browser history.
     }

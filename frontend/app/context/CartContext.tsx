@@ -39,7 +39,6 @@ export function CartProvider({ children }: CartProviderProps) {
     // Additional check: make sure we have a stored user before making API calls
     const storedUser = localStorage.getItem("user")
     if (!storedUser) {
-      console.info("[CartContext] No stored user found, skipping cart fetch.")
       setCart(null)
       return
     }
@@ -47,12 +46,9 @@ export function CartProvider({ children }: CartProviderProps) {
     setIsLoading(true)
     setError(null)
     try {
-      console.log("Fetching cart...")
       const cartData = await cartService.getMyCart()
-      console.log("Cart fetched:", cartData)
       setCart(cartData)
     } catch (err: any) {
-      console.error("Error fetching cart:", err)
       setError(err.response?.data?.message || "Failed to fetch cart")
     } finally {
       setIsLoading(false)
@@ -86,12 +82,10 @@ export function CartProvider({ children }: CartProviderProps) {
     setError(null)
     
     try {
-      console.log("Adding to cart:", { productId, quantity })
       const response = await cartService.addItemToCart(productId, quantity)
       
       // Handle the new response format with type safety
       const updatedCart = response.cart || response
-      console.log("Cart updated:", updatedCart)
 
       // Update cart state
       setCart(updatedCart)
@@ -110,7 +104,6 @@ export function CartProvider({ children }: CartProviderProps) {
 
       return updatedCart
     } catch (err: any) {
-      console.error("Error adding to cart:", err)
       
       // Revert optimistic update on error
       if (optimisticCart) {
@@ -153,13 +146,10 @@ export function CartProvider({ children }: CartProviderProps) {
     setIsLoading(true)
     setError(null)
     try {
-      console.log("Removing from cart:", productId)
       const updatedCart = await cartService.removeItemFromCart(productId)
-      console.log("Cart after removal:", updatedCart)
       setCart(updatedCart)
       return updatedCart
     } catch (err: any) {
-      console.error("Error removing from cart:", err)
       setError(err.response?.data?.message || "Failed to remove item from cart")
       throw err
     } finally {
@@ -174,7 +164,6 @@ export function CartProvider({ children }: CartProviderProps) {
       await cartService.clearCart()
       setCart(null)
     } catch (err: any) {
-      console.error("Error clearing cart:", err)
       setError(err.response?.data?.message || "Failed to clear cart")
       throw err
     } finally {
@@ -190,9 +179,7 @@ export function CartProvider({ children }: CartProviderProps) {
     setIsLoading(true)
     setError(null)
     try {
-      console.log("Validating cart...")
       const validationResult = await cartService.validateCart()
-      console.log("Cart validation result:", validationResult)
       
       // If cart has issues, show appropriate toast
       if (!validationResult.isValid && validationResult.issues?.length > 0) {
@@ -206,7 +193,6 @@ export function CartProvider({ children }: CartProviderProps) {
       
       return validationResult
     } catch (err: any) {
-      console.error("Error validating cart:", err)
       const errorMessage = err.response?.data?.message || "Failed to validate cart"
       setError(errorMessage)
       
@@ -230,7 +216,6 @@ export function CartProvider({ children }: CartProviderProps) {
 
   // Fetch cart when authentication status changes
   useEffect(() => {
-    console.log("Auth status changed:", isAuthenticated)
     fetchCart()
   }, [isAuthenticated])
 

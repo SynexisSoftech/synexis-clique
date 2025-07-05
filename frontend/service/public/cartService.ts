@@ -94,7 +94,6 @@ class PublicCartService {
       const response = await apiClient.get<IUserCart>(this.baseUrl)
       return response.data
     } catch (error) {
-      console.error("Error fetching my cart:", error)
       throw error
     }
   }
@@ -107,7 +106,6 @@ class PublicCartService {
       const response = await apiClient.post<IUserCart>(`${this.baseUrl}/items`, itemData)
       return response.data
     } catch (error) {
-      console.error("Error adding item to cart:", error)
       throw error
     }
   }
@@ -120,7 +118,6 @@ class PublicCartService {
       const response = await apiClient.delete<IUserCart>(`${this.baseUrl}/items/${productId}`)
       return response.data
     } catch (error) {
-      console.error(`Error removing item ${productId} from cart:`, error)
       throw error
     }
   }
@@ -133,7 +130,6 @@ class PublicCartService {
       const response = await apiClient.delete<{ message: string }>(this.baseUrl)
       return response.data
     } catch (error) {
-      console.error("Error clearing cart:", error)
       throw error
     }
   }
@@ -145,7 +141,6 @@ class PublicCartService {
     try {
       return await this.addItemToCart({ productId, quantity })
     } catch (error) {
-      console.error(`Error updating quantity for item ${productId}:`, error)
       throw error
     }
   }
@@ -174,7 +169,6 @@ class PublicCartService {
         totalSavings,
       }
     } catch (error) {
-      console.error("Error calculating cart summary:", error)
       throw error
     }
   }
@@ -187,7 +181,6 @@ class PublicCartService {
       const cart = await this.getMyCart()
       return cart.items.some((item) => item.productId._id === productId)
     } catch (error) {
-      console.error(`Error checking if product ${productId} is in cart:`, error)
       return false
     }
   }
@@ -201,7 +194,6 @@ class PublicCartService {
       const item = cart.items.find((item) => item.productId._id === productId)
       return item ? item.quantity : 0
     } catch (error) {
-      console.error(`Error getting quantity for product ${productId}:`, error)
       return 0
     }
   }
@@ -214,7 +206,6 @@ class PublicCartService {
       const cart = await this.getMyCart()
       return cart.items.reduce((sum, item) => sum + item.quantity, 0)
     } catch (error) {
-      console.error("Error getting cart item count:", error)
       return 0
     }
   }
@@ -250,7 +241,6 @@ class PublicCartService {
         insufficientStockItems,
       }
     } catch (error) {
-      console.error("Error validating cart items:", error)
       throw error
     }
   }
@@ -268,7 +258,6 @@ class PublicCartService {
 
       return cart
     } catch (error) {
-      console.error("Error bulk adding items to cart:", error)
       throw error
     }
   }
