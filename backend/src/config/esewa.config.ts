@@ -42,8 +42,8 @@ const getESewaConfig = (): ESewaConfig => {
     MERCHANT_ID: process.env.ESEWA_MERCHANT_ID || "",
     
     // URLs
-    SUCCESS_URL: process.env.ESEWA_SUCCESS_URL || "http://localhost:3000/success",
-    FAILURE_URL: process.env.ESEWA_FAILURE_URL || "http://localhost:3000/failure",
+    SUCCESS_URL: process.env.ESEWA_SUCCESS_URL || "",
+    FAILURE_URL: process.env.ESEWA_FAILURE_URL || "",
     VERIFICATION_URL: process.env.ESEWA_VERIFICATION_URL || "https://esewa.com.np/epay/transrec",
     
     // Security settings - strict in production, relaxed in development

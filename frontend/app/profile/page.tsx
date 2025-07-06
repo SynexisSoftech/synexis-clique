@@ -83,7 +83,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+        toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "error" });
         return;
       }
       const reader = new FileReader();
@@ -118,7 +118,7 @@ export default function ProfilePage() {
       toast({
         title: "Update Failed",
         description: error.response?.data?.message || "Failed to update profile.",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setIsUpdating(false);
@@ -159,7 +159,7 @@ export default function ProfilePage() {
       toast({
         title: "Password Change Failed",
         description: errorMessage,
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setIsUpdating(false);

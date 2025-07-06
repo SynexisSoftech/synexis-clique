@@ -71,23 +71,25 @@ export function AddToCartButton({
     <div className="flex items-center gap-2">
       {currentQuantity === 0 ? (
         <>
-          <div className="flex items-center border rounded-md">
+          <div className="flex items-center border rounded-md h-7">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => handleQuantityChange(quantity - 1)}
               disabled={quantity <= 1 || isButtonLoading}
+              className="h-7 w-7 p-0 text-xs"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3 w-3" />
             </Button>
-            <span className="px-3 py-1 min-w-[3rem] text-center">{quantity}</span>
+            <span className="px-2 py-0 min-w-[2rem] text-center text-xs font-medium">{quantity}</span>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => handleQuantityChange(quantity + 1)}
               disabled={isButtonLoading || (maxQuantity && quantity >= maxQuantity)}
+              className="h-7 w-7 p-0 text-xs"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </Button>
           </div>
           <Button

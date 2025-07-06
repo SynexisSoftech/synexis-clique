@@ -64,7 +64,7 @@ export default function AdminReviewsPage() {
       toast({
         title: "Error",
         description: "Failed to fetch reviews. Please try again.",
-        variant: "destructive",
+        variant: "error",
       })
       console.error("Error fetching reviews:", error)
     } finally {
@@ -89,7 +89,7 @@ export default function AdminReviewsPage() {
       toast({
         title: "Error",
         description: "Failed to update review status.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setActionLoading(false)
@@ -115,7 +115,7 @@ export default function AdminReviewsPage() {
       toast({
         title: "Error",
         description: "Failed to delete the review.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setActionLoading(false)

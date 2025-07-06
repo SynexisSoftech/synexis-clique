@@ -85,7 +85,7 @@ export default function ProductReviews({
         toast({
           title: "Error",
           description: err.message || "Failed to fetch reviews",
-          variant: "destructive",
+          variant: "error",
         })
       } finally {
         setLoading(false)
@@ -183,7 +183,7 @@ export default function ProductReviews({
           </div>
         </div>
       ) : error ? (
-        <Alert variant="destructive">
+        <Alert variant="error">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : reviews.length === 0 ? (

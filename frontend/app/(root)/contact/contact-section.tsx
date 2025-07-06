@@ -82,7 +82,7 @@ export default function ContactPage() {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -93,7 +93,7 @@ export default function ContactPage() {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address.",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -120,7 +120,7 @@ export default function ContactPage() {
       toast({
         title: "Error",
         description: err.message || "Failed to send message. Please try again.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setIsSubmitting(false)

@@ -44,7 +44,7 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
       toast({
         title: "No Changes",
         description: "The status is already set to this value",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -63,7 +63,7 @@ export default function OrderStatusUpdateModal({ order, open, onClose, onStatusU
       toast({
         title: "Update Failed",
         description: error.response?.data?.message || "Failed to update order status",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setIsUpdating(false)

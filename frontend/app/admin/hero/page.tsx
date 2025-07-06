@@ -32,7 +32,7 @@ export default function HeroSlidesPage() {
         toast({
           title: "Error",
           description: "Failed to fetch hero slides",
-          variant: "destructive",
+          variant: "error",
         })
       } finally {
         setIsLoading(false)
@@ -61,7 +61,7 @@ export default function HeroSlidesPage() {
       toast({
         title: "Error",
         description: "Failed to delete slide",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }

@@ -84,7 +84,7 @@
 //           toast({
 //             title: "Payment Verification Failed",
 //             description: "Payment status could not be verified.",
-//             variant: "destructive",
+//             variant: "error",
 //           })
 //         }
 //       } catch (error: any) {
@@ -93,7 +93,7 @@
 //         toast({
 //           title: "Payment Verification Failed",
 //           description: error.message || "Failed to verify payment",
-//           variant: "destructive",
+//           variant: "error",
 //         })
 //       } finally {
 //         setIsVerifying(false)

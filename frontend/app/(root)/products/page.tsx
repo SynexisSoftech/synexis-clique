@@ -184,7 +184,7 @@ export default function ProductsPage() {
         toast({
           title: "Error",
           description: err.message || "Failed to fetch products",
-          variant: "destructive",
+          variant: "error",
         })
       } finally {
         setLoading(false)
@@ -1132,23 +1132,6 @@ export default function ProductsPage() {
                               </CardHeader>
 
                               <CardContent className="p-2 sm:p-3 flex-1 flex flex-col">
-                                {/* Rating */}
-                                <div className="flex items-center gap-1 mb-1">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={`h-3 w-3 ${
-                                        i < Math.floor(product.rating)
-                                          ? "text-amber-400 fill-amber-400"
-                                          : i < product.rating
-                                            ? "text-amber-400 fill-amber-400 opacity-50"
-                                            : "text-slate-300"
-                                      }`}
-                                    />
-                                  ))}
-                                  <span className="text-xs text-slate-500 ml-1">({product.reviews})</span>
-                                </div>
-
                                 {/* Category */}
                                 <Badge
                                   variant="secondary"
@@ -1271,17 +1254,25 @@ export default function ProductsPage() {
                                 </div>
                               </CardContent>
 
-                              <CardFooter className="p-2 sm:p-3 pt-0 mt-auto">
+                              <CardFooter className="p-2 pt-0 mt-auto">
                                 {product.status === "out-of-stock" || product.stock <= 0 ? (
-                                  <Button className="w-full bg-gray-300 text-gray-600 cursor-not-allowed" disabled>
+                                  <Button className="w-full bg-gray-300 text-gray-600 cursor-not-allowed text-sm py-2" disabled>
                                     Out of Stock
                                   </Button>
                                 ) : (
                                   <AddToCartButton
                                     productId={product.id}
-                                    className="w-full bg-amber-800 hover:bg-amber-900 text-white transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+                                    className="w-full bg-amber-800 hover:bg-amber-900 text-white text-sm py-2 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
                                   />
                                 )}
+                                <Button
+                                  asChild
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full mt-2 border-amber-200 text-amber-800 hover:bg-amber-50 text-sm py-2"
+                                >
+                                  <Link href={`/products/${product.id}`}>View Product</Link>
+                                </Button>
                               </CardFooter>
                             </Card>
                           </motion.div>
@@ -1345,21 +1336,6 @@ export default function ProductsPage() {
                                   >
                                     {product.category}
                                   </Badge>
-                                  <div className="flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < Math.floor(product.rating)
-                                            ? "text-amber-400 fill-amber-400"
-                                            : i < product.rating
-                                              ? "text-amber-400 fill-amber-400 opacity-50"
-                                              : "text-slate-300"
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="text-xs text-slate-500 ml-1">({product.reviews})</span>
-                                  </div>
                                 </div>
 
                                 <Link href={`/products/${product.id}`} prefetch={true}>
@@ -1532,6 +1508,14 @@ export default function ProductsPage() {
                                     )}
                                   </div>
                                 </div>
+                                <Button
+                                  asChild
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full mt-2 border-amber-200 text-amber-800 hover:bg-amber-50 text-sm py-2"
+                                >
+                                  <Link href={`/products/${product.id}`}>View Product</Link>
+                                </Button>
                               </div>
                             </div>
                           </Card>
@@ -1686,21 +1670,6 @@ export default function ProductsPage() {
                     <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-0">
                       {quickViewProduct.category}
                     </Badge>
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < Math.floor(quickViewProduct.rating)
-                              ? "text-amber-400 fill-amber-400"
-                              : i < quickViewProduct.rating
-                                ? "text-amber-400 fill-amber-400 opacity-50"
-                                : "text-slate-300"
-                          }`}
-                        />
-                      ))}
-                      <span className="text-sm text-slate-500 ml-1">({quickViewProduct.reviews} reviews)</span>
-                    </div>
                   </div>
 
                   <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">{quickViewProduct.name}</h3>

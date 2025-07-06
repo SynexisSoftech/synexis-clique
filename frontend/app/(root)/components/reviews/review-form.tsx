@@ -28,7 +28,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       toast({
         title: "Rating required",
         description: "Please select a rating before submitting your review",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -58,7 +58,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       toast({
         title: "Error",
         description: error.message || "Failed to submit review. Please try again.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setIsSubmitting(false)

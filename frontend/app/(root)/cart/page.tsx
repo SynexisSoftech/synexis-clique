@@ -63,7 +63,7 @@ export default function CartPage() {
       toast({
         title: "Error",
         description: "Failed to remove item from cart",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }
@@ -100,7 +100,7 @@ export default function CartPage() {
       toast({
         title: "Error",
         description: "Failed to update item quantity",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setUpdatingItems((prev) => {
@@ -122,7 +122,7 @@ const handleIncreaseQuantity = async (
     toast({
       title: "Stock Limit Reached",
       description: `Maximum available quantity is ${maxStock}`,
-      variant: "destructive",
+      variant: "error",
     });
     return;
   }
@@ -142,7 +142,7 @@ const handleIncreaseQuantity = async (
     toast({
       title: "Error",
       description: "Failed to increase quantity",
-      variant: "destructive",
+      variant: "error",
     });
   } finally {
     setUpdatingItems((prev) => {
@@ -174,7 +174,7 @@ const handleIncreaseQuantity = async (
       toast({
         title: "Error",
         description: "Failed to decrease quantity",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setUpdatingItems((prev) => {
@@ -196,7 +196,7 @@ const handleIncreaseQuantity = async (
       toast({
         title: "Error",
         description: "Failed to clear cart",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }
@@ -206,7 +206,7 @@ const handleIncreaseQuantity = async (
       toast({
         title: "Invalid Promo Code",
         description: "Please enter a valid promo code",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }

@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Session Expired",
         description: "Your session has expired. Please log in again.",
-        variant: "destructive",
+        variant: "error",
       });
       router.push("/auth/login");
     };

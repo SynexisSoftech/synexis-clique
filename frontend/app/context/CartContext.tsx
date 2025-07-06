@@ -67,7 +67,7 @@ export function CartProvider({ children }: CartProviderProps) {
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive",
+        variant: "error",
       })
       throw new Error(errorMessage)
     }
@@ -100,6 +100,7 @@ export function CartProvider({ children }: CartProviderProps) {
         description: action === "updated" 
           ? `${productName} quantity updated to ${response.newQuantity || quantity}`
           : `${productName} added to your cart`,
+        variant: "success",
       })
 
       return updatedCart
@@ -133,7 +134,7 @@ export function CartProvider({ children }: CartProviderProps) {
       toast({
         title: toastTitle,
         description: toastDescription,
-        variant: "destructive",
+        variant: "error",
       })
 
       throw err
@@ -187,7 +188,7 @@ export function CartProvider({ children }: CartProviderProps) {
         toast({
           title: "Cart Issues Found",
           description: `${issueCount} item${issueCount > 1 ? 's' : ''} in your cart need attention`,
-          variant: "destructive",
+          variant: "warning",
         })
       }
       
@@ -199,7 +200,7 @@ export function CartProvider({ children }: CartProviderProps) {
       toast({
         title: "Validation Error",
         description: errorMessage,
-        variant: "destructive",
+        variant: "error",
       })
       
       throw err

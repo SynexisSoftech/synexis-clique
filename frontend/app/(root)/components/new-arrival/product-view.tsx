@@ -106,7 +106,6 @@ export default function ProductQuickViewModal({ product, isOpen, onClose }: Prod
                       <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating!) ? "fill-current" : ""}`} />
                     ))}
                   </div>
-                  <span className="text-sm text-gray-600">({product.reviewsCount || 0} reviews)</span>
                 </div>
               )}
             </div>

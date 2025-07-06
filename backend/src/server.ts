@@ -9,6 +9,7 @@ import helmet from 'helmet'; // Add helmet for security headers
 import { logESewaConfigStatus } from './config/esewa.config';
 import { monitoringService } from './services/monitoring.service';
 import { deadLetterQueueService } from './services/deadLetterQueue.service';
+import { validateSecurityConfig } from './config/security';
 
  // Add this line to import category routes
 import adminRouter from './routes/admin/admin.routes';
@@ -46,10 +47,33 @@ console.log('cwd:', process.cwd());
 
 const app: Application = express();
 const PORT: string | number = process.env.PORT || 3001;
-const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:27017/default_db';
+const MONGODB_URI: string = process.env.MONGODB_URI || '';
+
+// Validate required environment variables
+const validateEnvironment = (): void => {
+  const requiredVars = [
+    'MONGODB_URI',
+    'ACCESS_TOKEN_SECRET',
+    'REFRESH_TOKEN_SECRET',
+    'SESSION_SECRET'
+  ];
+
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  if (missingVars.length > 0) {
+    console.error('❌ Missing required environment variables:', missingVars.join(', '));
+    process.exit(1);
+  }
+
+  // Validate security config
+  const securityValidation = validateSecurityConfig();
+  if (!securityValidation.valid) {
+    console.error('❌ Security configuration errors:', securityValidation.errors);
+    process.exit(1);
+  }
+};
 
 const corsOptions = {
-  origin: 'http://localhost:3000', // <-- IMPORTANT: Change to your Next.js URL
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true, // <-- IMPORTANT: Allow sending cookies (for refreshToken)
   methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'], // Allowed HTTP methods
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-ID'],
@@ -64,7 +88,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:3000"],
+      connectSrc: ["'self'", process.env.CORS_ORIGIN || ''],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -135,7 +159,10 @@ const server = http.createServer(app);
 
 const startServer = async () => {
   try {
-    if (!process.env.MONGODB_URI) {
+    // Validate environment variables before starting
+    validateEnvironment();
+    
+    if (!MONGODB_URI) {
       console.error('FATAL ERROR: MONGODB_URI is not defined in .env file');
       process.exit(1);
     }
@@ -143,7 +170,7 @@ const startServer = async () => {
     console.log('🔌 Successfully connected to MongoDB');
 
     server.listen(PORT, () => {
-      console.log(`🚀 Server is running on http://localhost:${PORT} , clique backend working`);
+      console.log(`🚀 Server is running on port ${PORT} , clique backend working`);
       console.log(`📘 Swagger UI available at http://localhost:${PORT}/api-docs`);
       
       // Log eSewa configuration status

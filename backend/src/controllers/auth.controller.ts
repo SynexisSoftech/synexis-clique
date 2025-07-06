@@ -67,20 +67,20 @@ export const signup = asyncHandler(async (req: Request, res: Response): Promise<
       // In a more robust application, you might want to:
       // a) Validate the URL format thoroughly.
       // b) Fetch the image from the URL and re-upload it to your Cloudinary account
-      //    for better control, security, and consistent storage.
-      photoURL = photoUrlInput;
-      console.log(`[Signup] Using provided photo URL: ${photoURL}`);
+      // const response = await fetch(photoURL);
+      // const buffer = await response.buffer();
+      // const base64Image = buffer.toString('base64');
+      // photoURL = await uploadImageToCloudinary(base64Image, 'user_profiles');
+      photoURL = process.env.CLOUDINARY_DEFAULT_AVATAR_URL || 'https://via.placeholder.com/150'; // Replace with your default image URL
     } else {
-      // If no photo is provided, you can set a default image URL here,
-      // or return an error if a photo is mandatory for signup.
-      photoURL = 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png'; // Replace with your default image URL
-      console.log('[Signup] No photo provided. Using default photo.');
+      // c) Use a default avatar
+      photoURL = process.env.CLOUDINARY_DEFAULT_AVATAR_URL || 'https://via.placeholder.com/150'; // Replace with your default image URL
     }
 
     // Optional: Enforce photo requirement.
     if (!photoURL) {
       // Set a default photo URL instead of requiring one
-      photoURL = 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png'; // Replace with your default image URL
+      photoURL = process.env.CLOUDINARY_DEFAULT_AVATAR_URL || 'https://via.placeholder.com/150'; // Replace with your default image URL
       console.log('[Signup] No photo provided. Using default photo.');
     }
 

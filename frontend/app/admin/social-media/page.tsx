@@ -66,11 +66,11 @@ export default function SocialLinksPage() {
     if (!file) return
 
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid File", description: "Please select an image file.", variant: "destructive" })
+      toast({ title: "Invalid File", description: "Please select an image file.", variant: "error" })
       return
     }
     if (file.size > 6 * 1024 * 1024) {
-      toast({ title: "File Too Large", description: "Image must be smaller than 6MB.", variant: "destructive" })
+      toast({ title: "File Too Large", description: "Image must be smaller than 6MB.", variant: "error" })
       return
     }
 
@@ -85,7 +85,7 @@ export default function SocialLinksPage() {
       setUploadingIcon(false)
     }
     reader.onerror = () => {
-      toast({ title: "Upload Error", description: "Failed to process the image.", variant: "destructive" })
+      toast({ title: "Upload Error", description: "Failed to process the image.", variant: "error" })
       setUploadingIcon(false)
     }
   }
@@ -110,7 +110,7 @@ export default function SocialLinksPage() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to load social links.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setLoading(false)
@@ -123,7 +123,7 @@ export default function SocialLinksPage() {
       toast({
         title: "Validation Error",
         description: "Title, Link, and an Icon are required to create a new link.",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -140,7 +140,7 @@ export default function SocialLinksPage() {
       toast({
         title: "Error Creating Link",
         description: error instanceof Error ? error.message : "An unknown error occurred.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setSubmitting(false)
@@ -150,7 +150,7 @@ export default function SocialLinksPage() {
   const handleEdit = async () => {
     if (!selectedLink) return
     if (!formData.title || !formData.link) {
-      toast({ title: "Validation Error", description: "Title and Link are required.", variant: "destructive" })
+      toast({ title: "Validation Error", description: "Title and Link are required.", variant: "error" })
       return
     }
 
@@ -177,7 +177,7 @@ export default function SocialLinksPage() {
       toast({
         title: "Error Updating Link",
         description: error instanceof Error ? error.message : "An unknown error occurred.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setSubmitting(false)
@@ -198,7 +198,7 @@ export default function SocialLinksPage() {
       toast({
         title: "Error Deleting Link",
         description: error instanceof Error ? error.message : "An unknown error occurred.",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setSubmitting(false)

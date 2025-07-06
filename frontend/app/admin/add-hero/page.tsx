@@ -44,7 +44,7 @@ export default function AddHeroSlidePage() {
       toast({
         title: "Invalid File",
         description: "Please upload an image file",
-        variant: "destructive"
+        variant: "error"
       })
       return
     }
@@ -73,7 +73,7 @@ export default function AddHeroSlidePage() {
       toast({
         title: "Image Required",
         description: "Please upload an image for the hero slide",
-        variant: "destructive"
+        variant: "error"
       })
       return
     }
@@ -108,7 +108,7 @@ export default function AddHeroSlidePage() {
       toast({
         title: "Error",
         description: error.message || "Failed to create hero slide",
-        variant: "destructive"
+        variant: "error"
       })
     } finally {
       setIsSubmitting(false)

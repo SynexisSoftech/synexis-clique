@@ -59,7 +59,7 @@ export default function CartDropdown({ onClick }: CartDropdownProps) {
       toast({
         title: "Error",
         description: "Failed to remove item from cart",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }

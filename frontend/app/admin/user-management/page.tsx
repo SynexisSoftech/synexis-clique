@@ -326,7 +326,7 @@ export default function AdminUsersManagementPage() {
     toast({
       title,
       description: apiError.message,
-      variant: "destructive",
+      variant: "error",
     })
 
     // Show individual validation errors
@@ -336,7 +336,7 @@ export default function AdminUsersManagementPage() {
           toast({
             title: `Validation Error${error.field ? ` (${error.field})` : ""}`,
             description: error.message,
-            variant: "destructive",
+            variant: "error",
           })
         }, index * 500) // Stagger error messages
       })
@@ -347,7 +347,7 @@ export default function AdminUsersManagementPage() {
       toast({
         title: "Network Error",
         description: "Please check your internet connection and try again",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }
@@ -515,7 +515,7 @@ export default function AdminUsersManagementPage() {
       toast({
         title: "Export Failed",
         description: "Failed to export users data",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }

@@ -98,7 +98,7 @@ export default function AdminOrdersPage() {
       toast({
         title: "Error",
         description: "Failed to fetch orders",
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setLoading(false)

@@ -34,7 +34,7 @@ export const createFakePaymentData = (
   const baseData = {
     transaction_uuid,
     total_amount: amount.toString(),
-    product_code: 'EPAYTEST',
+    product_code: process.env.NEXT_PUBLIC_ESEWA_PRODUCT_CODE || 'EPAYTEST',
     timestamp
   };
 
@@ -160,7 +160,7 @@ export const createFakeOrderData = () => {
     ],
     shippingInfo: {
       fullName: 'Test User',
-      email: 'test@example.com',
+      email: process.env.NEXT_PUBLIC_TEST_EMAIL || 'test@example.com',
       phone: '9841234567',
       address: 'Test Address, Kathmandu',
       city: 'Kathmandu',
@@ -182,7 +182,7 @@ export const testCheckoutFlow = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token') || 'test_token'}`
+        'Authorization': `Bearer ${localStorage.getItem('token') || process.env.NEXT_PUBLIC_TEST_TOKEN || 'test_token'}`
       },
       body: JSON.stringify(orderData)
     });

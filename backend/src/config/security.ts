@@ -2,19 +2,19 @@
 export const SECURITY_CONFIG = {
   // JWT Configuration
   JWT: {
-    ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET || 'your-access-token-secret',
-    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || 'your-refresh-token-secret',
+    ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: '15m',
     REFRESH_TOKEN_EXPIRY: '7d',
   },
 
   // eSewa Payment Gateway Configuration
   ESEWA: {
-    SECRET_KEY: process.env.ESEWA_SECRET_KEY || "",
-    PRODUCT_CODE: process.env.ESEWA_PRODUCT_CODE || "EPAYTEST",
-    MERCHANT_ID: process.env.ESEWA_MERCHANT_ID || "EPAYTEST",
-    SUCCESS_URL: process.env.ESEWA_SUCCESS_URL || "http://localhost:3000/success",
-    FAILURE_URL: process.env.ESEWA_FAILURE_URL || "http://localhost:3000/failure",
+    SECRET_KEY: process.env.ESEWA_SECRET_KEY,
+    PRODUCT_CODE: process.env.ESEWA_PRODUCT_CODE,
+    MERCHANT_ID: process.env.ESEWA_MERCHANT_ID,
+    SUCCESS_URL: process.env.ESEWA_SUCCESS_URL,
+    FAILURE_URL: process.env.ESEWA_FAILURE_URL,
     API_URL: "https://rc-epay.esewa.com.np/api/epay/main/v2/form",
   },
 
@@ -79,7 +79,7 @@ export const SECURITY_CONFIG = {
 
   // CORS Configuration
   CORS: {
-    ORIGIN: process.env.CORS_ORIGIN || "http://localhost:3000",
+    ORIGIN: process.env.CORS_ORIGIN,
     CREDENTIALS: true,
     METHODS: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     ALLOWED_HEADERS: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -101,7 +101,7 @@ export const SECURITY_CONFIG = {
 
   // Session Security
   SESSION: {
-    SECRET: process.env.SESSION_SECRET || 'your-session-secret',
+    SECRET: process.env.SESSION_SECRET,
     COOKIE_SECURE: process.env.NODE_ENV === 'production',
     COOKIE_HTTPONLY: true,
     COOKIE_SAMESITE: 'strict' as const,
@@ -123,6 +123,54 @@ export const SECURITY_CONFIG = {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
   },
+};
+
+// Validate required environment variables
+export const validateSecurityConfig = (): { valid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (!SECURITY_CONFIG.JWT.ACCESS_TOKEN_SECRET) {
+    errors.push('ACCESS_TOKEN_SECRET is required');
+  }
+  
+  if (!SECURITY_CONFIG.JWT.REFRESH_TOKEN_SECRET) {
+    errors.push('REFRESH_TOKEN_SECRET is required');
+  }
+  
+  if (!SECURITY_CONFIG.SESSION.SECRET) {
+    errors.push('SESSION_SECRET is required');
+  }
+  
+  if (!SECURITY_CONFIG.CORS.ORIGIN) {
+    errors.push('CORS_ORIGIN is required');
+  }
+  
+  if (process.env.NODE_ENV === 'production') {
+    if (!SECURITY_CONFIG.ESEWA.SECRET_KEY) {
+      errors.push('ESEWA_SECRET_KEY is required in production');
+    }
+    
+    if (!SECURITY_CONFIG.ESEWA.PRODUCT_CODE) {
+      errors.push('ESEWA_PRODUCT_CODE is required in production');
+    }
+    
+    if (!SECURITY_CONFIG.ESEWA.MERCHANT_ID) {
+      errors.push('ESEWA_MERCHANT_ID is required in production');
+    }
+    
+    if (!SECURITY_CONFIG.ESEWA.SUCCESS_URL) {
+      errors.push('ESEWA_SUCCESS_URL is required in production');
+    }
+    
+    if (!SECURITY_CONFIG.ESEWA.FAILURE_URL) {
+      errors.push('ESEWA_FAILURE_URL is required in production');
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 };
 
 // Security utility functions

@@ -126,7 +126,7 @@ function SuccessPageContent() {
             toast({
               title: "Payment Successful!",
               description: "Your payment was successful, but there was an issue updating stock. Please contact support.",
-              variant: "destructive",
+              variant: "error",
             });
           }
         } else {
@@ -134,7 +134,7 @@ function SuccessPageContent() {
           toast({
             title: "Payment Failed",
             description: "Your payment was not completed successfully.",
-            variant: "destructive",
+            variant: "error",
           })
         }
       } catch (error: any) {
@@ -142,7 +142,7 @@ function SuccessPageContent() {
         toast({
           title: "Error",
           description: "Failed to process payment data.",
-          variant: "destructive",
+          variant: "error",
         })
       } finally {
         setIsLoading(false)

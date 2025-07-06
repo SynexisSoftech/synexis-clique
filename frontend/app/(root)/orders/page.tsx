@@ -36,7 +36,7 @@ export default function OrdersPage() {
         toast({
           title: "Error",
           description: "Could not fetch your orders.",
-          variant: "destructive",
+          variant: "error",
         });
       } finally {
         setLoading(false);

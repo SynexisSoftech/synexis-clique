@@ -151,7 +151,7 @@ export default function AddCategoryPage() {
       toast({
         title: "Validation Error",
         description: "Please fix the errors below and try again",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -210,7 +210,7 @@ export default function AddCategoryPage() {
           toast({
             title: `Validation Error${err.field ? ` (${err.field})` : ""}`,
             description: err.message,
-            variant: "destructive",
+            variant: "error",
           })
         })
 
@@ -220,7 +220,7 @@ export default function AddCategoryPage() {
         toast({
           title: "Error",
           description: apiError.message,
-          variant: "destructive",
+          variant: "error",
         })
       }
     } finally {

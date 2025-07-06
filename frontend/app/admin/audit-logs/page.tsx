@@ -58,7 +58,7 @@ export default function AuditLogsPage() {
       toast({
         title: "Error",
         description: "Failed to load audit logs",
-        variant: "destructive"
+        variant: "error"
       });
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function AuditLogsPage() {
       toast({
         title: "Error",
         description: "Failed to export audit logs",
-        variant: "destructive"
+        variant: "error"
       });
     }
   };

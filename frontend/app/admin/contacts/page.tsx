@@ -94,7 +94,7 @@ export default function ContactsPage() {
       toast({
         title: "Error",
         description: err.message || "Failed to delete contact message.",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }
@@ -116,7 +116,7 @@ export default function ContactsPage() {
       toast({
         title: "Error",
         description: err.message || "Failed to update status.",
-        variant: "destructive",
+        variant: "error",
       })
     }
   }

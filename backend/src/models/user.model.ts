@@ -40,7 +40,10 @@ lowercase: true,
  match: [ /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address'],
  },
  password: { type: String, required: true, minlength: 8 },
- photoURL: { type: String, default: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1/default-avatar.png' },
+ photoURL: { 
+    type: String, 
+    default: process.env.CLOUDINARY_DEFAULT_AVATAR_URL || 'https://via.placeholder.com/150'
+  },
  isVerified: { type: Boolean, default: false },
  isBlocked: { type: Boolean, default: false },
  loginAttempts: { type: Number, default: 0 },

@@ -187,7 +187,7 @@ export default function CheckoutPage() {
         toast({
           title: "Error",
           description: "Failed to load shipping information",
-          variant: "destructive",
+          variant: "error",
         })
       } finally {
         setIsLoadingShipping(false)
@@ -390,7 +390,7 @@ export default function CheckoutPage() {
       toast({
         title: "Validation Error",
         description: "Please fix the errors in the form before proceeding",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -399,7 +399,7 @@ export default function CheckoutPage() {
       toast({
         title: "Your cart is empty",
         description: "Please add items to your cart before checking out.",
-        variant: "destructive",
+        variant: "error",
       })
       return
     }
@@ -412,7 +412,7 @@ export default function CheckoutPage() {
         toast({
           title: "Too Many Payment Attempts",
           description: `Please wait until ${resetTime} before trying again.`,
-          variant: "destructive",
+          variant: "error",
         });
         return;
       }
@@ -473,7 +473,7 @@ export default function CheckoutPage() {
       toast({
         title: "Order Failed",
         description: errorMessage,
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setIsProcessing(false)

@@ -72,7 +72,7 @@ export default function CategoriesPage() {
       toast({
         title: "Error Loading Categories",
         description: apiError.message,
-        variant: "destructive",
+        variant: "error",
       })
     } finally {
       setIsLoading(false)
@@ -107,7 +107,7 @@ export default function CategoriesPage() {
       toast({
         title: "Delete Failed",
         description: apiError.message,
-        variant: "destructive",
+        variant: "error",
       })
 
       // Show detailed validation errors if available
@@ -116,7 +116,7 @@ export default function CategoriesPage() {
           toast({
             title: `Validation Error${error.field ? ` (${error.field})` : ""}`,
             description: error.message,
-            variant: "destructive",
+            variant: "error",
           })
         })
       }
